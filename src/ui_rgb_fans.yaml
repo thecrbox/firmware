@@ -50,71 +50,56 @@ number:
     restore_value: true
 
 light:
-  - platform: neopixelbus
-    variant: WS2812
+  - platform: esp32_rmt_led_strip
+    chipset: WS2812
     pin: GPIO32
     num_leds: 8
-    type: GRB
+    rgb_order: GRB
     name: "RGB 1"
     id: rgb1
     device_id: device_interface
     default_transition_length: 0s
     internal: true
-    method:
-      type: esp32_rmt
-      channel: 0
-  - platform: neopixelbus
-    variant: WS2812
+  - platform: esp32_rmt_led_strip
+    chipset: WS2812
     pin: GPIO33
     num_leds: 8
-    type: GRB
+    rgb_order: GRB
     name: "RGB 2"
     id: rgb2
     device_id: device_interface
     default_transition_length: 0s
     internal: true
-    method:
-      type: esp32_rmt
-      channel: 1
-  - platform: neopixelbus
-    variant: WS2812
+  - platform: esp32_rmt_led_strip
+    chipset: WS2812
     pin: GPIO25
     num_leds: 8
-    type: GRB
+    rgb_order: GRB
     name: "RGB 3"
     id: rgb3
     device_id: device_interface
     default_transition_length: 0s
     internal: true
-    method:
-      type: esp32_rmt
-      channel: 2
-  - platform: neopixelbus
-    variant: WS2812
+  - platform: esp32_rmt_led_strip
+    chipset: WS2812
     pin: GPIO26
     num_leds: 8
-    type: GRB
+    rgb_order: GRB
     name: "RGB 4"
     id: rgb4
     device_id: device_interface
     default_transition_length: 0s
     internal: true
-    method:
-      type: esp32_rmt
-      channel: 3
-  - platform: neopixelbus
-    variant: WS2812
+  - platform: esp32_rmt_led_strip
+    chipset: WS2812
     pin: GPIO27
     num_leds: 8
-    type: GRB
+    rgb_order: GRB
     name: "RGB 5"
     id: rgb5
     device_id: device_interface
     default_transition_length: 0s
     internal: true
-    method:
-      type: esp32_rmt
-      channel: 4
   - platform: partition
     default_transition_length: 0s
     name: "RGB All"

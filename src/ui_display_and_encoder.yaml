@@ -1,6 +1,15 @@
 esphome:
   includes:
     - src/ui_draw.h
+  on_boot:
+    priority: -100
+    then:
+      - delay: 0s
+      - if:
+          condition:
+            lambda: 'return id(network_hotspot_active);'
+          then:
+            - script.execute: ui_force_setup_mode
 
 i2c:
   - id: bus_a
@@ -22,12 +31,24 @@ globals:
     type: int
     restore_value: false
     initial_value: '0'
+  - id: ui_post_provisioning_ticks
+    type: int
+    restore_value: false
+    initial_value: '0'
   - id: ui_auto_config_unlock_clicks
     # 0..UI_UNLOCK_CLICKS-1 = unlocking
     # UI_UNLOCK_CLICKS = unlocked
     type: int
     restore_value: false
     initial_value: '0'
+  - id: ui_provisioning_requested
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: ui_inputs_locked
+    type: bool
+    restore_value: false
+    initial_value: 'false'
 
 interval:
 #  - interval: 10s
@@ -43,8 +64,23 @@ script:
   - id: ui_tick
     then:
       - lambda: |-
-          // Keep UI mode in sync with purifier mode
+          if (id(network_hotspot_active)) {
+            ESP_LOGD("UI", "ui_tick: ignoring tick while in provisioning hotspot");
+            return;
+          }
+
+          if (id(ui_post_provisioning_ticks) > 0) {
+            id(ui_post_provisioning_ticks) -= 1;
+            if (id(ui_post_provisioning_ticks) <= 0) {
+              id(ui_post_provisioning_ticks) = 0;
+              id(ui_on_post_provisioning_hold_complete).execute();
+            }
+            return;
+          }
+
+          // Keep UI mode in sync with purifier mode unless setup screen is active
           if (id(purifier_mode).state != id(ui_mode_select).state) {
+            ESP_LOGI("UI", "Syncing UI mode '%s' to purifier mode '%s'", id(ui_mode_select).state.c_str(), id(purifier_mode).state.c_str());
             id(ui_mode_select).make_call().set_option(id(purifier_mode).state).perform();
           }
           
@@ -93,136 +129,176 @@ script:
           } else if (id(ui_mode_select).state == "OFF") {
             fn_idler_manual();
             fn_idler_auto();
-          } else if (id(ui_mode_select).state == "QR Code") {
-            fn_idler_manual();
-            fn_idler_auto();
           }
   
 
   - id: ui_on_not_idle
     then:
-      - logger.log:
-          level: INFO
-          format: "NOT IDLE"
-      - globals.set:
-          id: ui_tick_auto_idle
-          value: '0'
-      - globals.set:
-          id: ui_tick_manual_idle
-          value: '0'
-      - globals.set:
-          id: ui_tick_screen_dim
-          value: '0'
       - lambda: |-
+          ESP_LOGI("UI", "ui_on_not_idle; ui_mode_select='%s'", id(ui_mode_select).state.c_str());
+          id(ui_tick_auto_idle) = 0;
+          id(ui_tick_manual_idle) = 0;
+          id(ui_tick_screen_dim) = 0;
           id(oled).set_contrast(1.0f);
           id(oled).set_brightness(1.0f);
 
   # short click - toggle focus
   - id: ui_on_click
     then:
-      - logger.log:
-          level: INFO
-          format: "Short click - toggling focus"
-
       - if:
           condition:
-            lambda: 'return id(ui_mode_select).state == "AUTO";'
+            lambda: 'return id(ui_inputs_locked);'
           then:
             - logger.log:
                 level: INFO
-                format: "Short click - toggling focus AUTO"
-            # click a couple of times until unlocked, then cycle focus
-            - lambda: |-
-                if (id(ui_auto_config_unlock_clicks) < ${UI_UNLOCK_CLICKS}) {
-                  id(ui_auto_config_unlock_clicks) += 1;
-                }
-                id(ui_focus_update_auto).execute();
-            - script.execute: ui_on_not_idle
-      - if:
-          condition:
-            - lambda: 'return id(ui_mode_select).state == "MANUAL";'
-          then:
+                format: "UI: ui_on_click; ignoring while inputs locked"
+          else:
             - logger.log:
                 level: INFO
-                format: "Short click - toggling focus MANUAL"
-            - select.next: focus_manual
-      - if:
-          condition:
-            - lambda: 'return id(ui_mode_select).state == "OFF";'
-          then:
-            - logger.log:
-                level: INFO
-                format: "Short click - toggling focus OFF"
-            - select.next: focus_off
+                format: "UI: ui_on_click; toggling focus"
+            - if:
+                condition:
+                  lambda: 'return id(ui_mode_select).state == "AUTO";'
+                then:
+                  - logger.log:
+                      level: INFO
+                      format: "UI: ui_on_click; toggling focus AUTO"
+                  # click a couple of times until unlocked, then cycle focus
+                  - lambda: |-
+                      if (id(ui_auto_config_unlock_clicks) < ${UI_UNLOCK_CLICKS}) {
+                        id(ui_auto_config_unlock_clicks) += 1;
+                      }
+                      id(ui_focus_update_auto).execute();
+                  - script.execute: ui_on_not_idle
+            - if:
+                condition:
+                  - lambda: 'return id(ui_mode_select).state == "MANUAL";'
+                then:
+                  - logger.log:
+                      level: INFO
+                      format: "UI: ui_on_click; toggling focus MANUAL"
+                  - select.next: focus_manual
+            - if:
+                condition:
+                  - lambda: 'return id(ui_mode_select).state == "OFF";'
+                then:
+                  - logger.log:
+                      level: INFO
+                      format: "UI: ui_on_click; toggling focus OFF"
+                  - select.next: focus_off
 
   # long click - toggle mode
   - id: ui_on_long_click
     then:
-      - logger.log: "Long click - toggling mode"
-      - script.execute: ui_on_not_idle
-      - select.next: ui_mode_select
+      - if:
+          condition:
+            lambda: 'return id(ui_inputs_locked);'
+          then:
+            - logger.log:
+                level: INFO
+                format: "UI: ui_on_long_click; ignoring while inputs locked"
+          else:
+            - if:
+                condition:
+#                  - lambda: 'return id(ui_provisioning_requested) != true;'
+                  - lambda: 'return id(network_hotspot_active) != true;'
+                then:
+                  - logger.log:
+                      level: INFO
+                      format: "UI: ui_on_long_click; toggling mode"
+                  - script.execute: ui_on_not_idle
+                  - select.next: ui_mode_select
+
+  # very long click - force setup mode
+  - id: ui_force_setup_mode
+    then:
+      - if:
+          condition:
+            lambda: 'return id(ui_inputs_locked);'
+          then:
+            - logger.log:
+                level: INFO
+                format: "UI: ui_force_setup_mode; ignoring while inputs locked"
+          else:
+            - logger.log:
+                level: INFO
+                format: "UI: ui_force_setup_mode; forcing provisioning mode"
+            - lambda: |-
+                // id(ui_provisioning_requested) = true;
+                id(page_init).show();
 
   - id: ui_on_rotate
     mode: queued
     parameters:
       dir: int     # +1 = right, -1 = left
     then:
-      - script.execute: ui_on_not_idle
-      - lambda: |-
-          // helper to advance a template select one step
-          auto select_next = [](auto &sel) {
-            sel->make_call().select_next(true).perform();
-          };
-          
-          auto select_previous = [](auto &sel) {
-            sel->make_call().select_previous(true).perform();
-          };
-          
-          const int step = (dir > 0 ? +${UI_ENCODER_STEP} : -${UI_ENCODER_STEP});
+      - if:
+          condition:
+            lambda: 'return id(ui_inputs_locked);'
+          then:
+            - logger.log:
+                level: INFO
+                format: "UI: ui_on_rotate; ignoring while inputs locked"
+          else:
+            - logger.log:
+                level: INFO
+                format: "UI: ui_on_rotate;"
+            - script.execute: ui_on_not_idle
+            - lambda: |-
+                // helper to advance a template select one step
+                auto select_next = [](auto &sel) {
+                  sel->make_call().select_next(true).perform();
+                };
 
-          if (id(ui_mode_select).state == "AUTO") {
-            if (id(focus_auto_config).state == "idle") {
-              if (dir > 0) {
-                select_next(id(focus_auto_quality));
-              } else {
-                select_previous(id(focus_auto_quality));
-              }
-            } else if (id(focus_auto_config).state == "config_auto_unlocking") {
-              id(ui_auto_config_unlock_clicks) = 0;
-              id(ui_focus_update_auto).execute();
-            } else if (id(focus_auto_config).state == "config_auto_night_time") {
-              id(ui_shift_time_30m).execute(false, dir);
-            } else if (id(focus_auto_config).state == "config_auto_night_fan") {
-              id(cfg_fan_auto_night).make_call()
-                .set_value(std::clamp(id(cfg_fan_auto_night).state + step, 0.0f, 100.0f)).perform();
-              PID::Instance().Control();
-            } else if (id(focus_auto_config).state == "config_auto_night_rgb") {
-              id(cfg_brightness_auto_night).make_call()
-                .set_value(std::clamp(id(cfg_brightness_auto_night).state + step, 0.0f, 100.0f)).perform();
-            } else if (id(focus_auto_config).state == "config_auto_day_time") {
-              id(ui_shift_time_30m).execute(true, dir);
-            } else if (id(focus_auto_config).state == "config_auto_day_fan") {
-              id(cfg_fan_auto_day).make_call()
-                .set_value(std::clamp(id(cfg_fan_auto_day).state + step, 0.0f, 100.0f)).perform();
-              PID::Instance().Control();
-            } else if (id(focus_auto_config).state == "config_auto_day_rgb") {
-              id(cfg_brightness_auto_day).make_call()
-                .set_value(std::clamp(id(cfg_brightness_auto_day).state + step, 0.0f, 100.0f)).perform();
-            }
-          } else if (id(ui_mode_select).state == "MANUAL") {
-            if (id(focus_manual).state == "idle") {
-              // no-op
-            } else if (id(focus_manual).state == "config_manual_fan") {
-              id(cfg_fan_manual).make_call()
-                .set_value(std::clamp(id(cfg_fan_manual).state + step, 0.0f, 100.0f)).perform();
-              PID::Instance().Control();
-            } else if (id(focus_manual).state == "config_manual_rgb") {
-              id(cfg_brightness_manual).make_call()
-                .set_value(std::clamp(id(cfg_brightness_manual).state + step, 0.0f, 100.0f)).perform();
-            }
-          } else if (id(ui_mode_select).state == "OFF") {
-            select_next(id(focus_off));
-          }
+                auto select_previous = [](auto &sel) {
+                  sel->make_call().select_previous(true).perform();
+                };
+
+                const int step = (dir > 0 ? +${UI_ENCODER_STEP} : -${UI_ENCODER_STEP});
+
+                if (id(ui_mode_select).state == "AUTO") {
+                  if (id(focus_auto_config).state == "idle") {
+                    if (dir > 0) {
+                      select_next(id(focus_auto_quality));
+                    } else {
+                      select_previous(id(focus_auto_quality));
+                    }
+                  } else if (id(focus_auto_config).state == "config_auto_unlocking") {
+                    id(ui_auto_config_unlock_clicks) = 0;
+                    id(ui_focus_update_auto).execute();
+                  } else if (id(focus_auto_config).state == "config_auto_night_time") {
+                    id(ui_shift_time_30m).execute(false, dir);
+                  } else if (id(focus_auto_config).state == "config_auto_night_fan") {
+                    id(cfg_fan_auto_night).make_call()
+                      .set_value(std::clamp(id(cfg_fan_auto_night).state + step, 0.0f, 100.0f)).perform();
+                    PID::Instance().Control();
+                  } else if (id(focus_auto_config).state == "config_auto_night_rgb") {
+                    id(cfg_brightness_auto_night).make_call()
+                      .set_value(std::clamp(id(cfg_brightness_auto_night).state + step, 0.0f, 100.0f)).perform();
+                  } else if (id(focus_auto_config).state == "config_auto_day_time") {
+                    id(ui_shift_time_30m).execute(true, dir);
+                  } else if (id(focus_auto_config).state == "config_auto_day_fan") {
+                    id(cfg_fan_auto_day).make_call()
+                      .set_value(std::clamp(id(cfg_fan_auto_day).state + step, 0.0f, 100.0f)).perform();
+                    PID::Instance().Control();
+                  } else if (id(focus_auto_config).state == "config_auto_day_rgb") {
+                    id(cfg_brightness_auto_day).make_call()
+                      .set_value(std::clamp(id(cfg_brightness_auto_day).state + step, 0.0f, 100.0f)).perform();
+                  }
+                } else if (id(ui_mode_select).state == "MANUAL") {
+                  if (id(focus_manual).state == "idle") {
+                    // no-op
+                  } else if (id(focus_manual).state == "config_manual_fan") {
+                    id(cfg_fan_manual).make_call()
+                      .set_value(std::clamp(id(cfg_fan_manual).state + step, 0.0f, 100.0f)).perform();
+                    PID::Instance().Control();
+                  } else if (id(focus_manual).state == "config_manual_rgb") {
+                    id(cfg_brightness_manual).make_call()
+                      .set_value(std::clamp(id(cfg_brightness_manual).state + step, 0.0f, 100.0f)).perform();
+                  }
+                } else if (id(ui_mode_select).state == "OFF") {
+                  select_next(id(focus_off));
+                }
           
 
   - id: ui_shift_time_30m
@@ -269,9 +345,15 @@ script:
   - id: ui_focus_update_auto
     then:
       - lambda: |-
+          if (id(network_hotspot_active)) {
+            ESP_LOGI("UI", "focus auto: provisioning active, forcing setup page");
+            id(page_init).show();
+            return;
+          }
+
           bool unlocked = (id(ui_auto_config_unlock_clicks) >= ${UI_UNLOCK_CLICKS});
           bool unlocking = (!unlocked) && (id(ui_auto_config_unlock_clicks) > 0);
-          
+
           if (unlocked) {
             id(focus_auto_config).make_call().select_next(true).perform();
             if (id(focus_auto_config).state == "idle") {
@@ -279,7 +361,7 @@ script:
               id(page_auto).show();
             } else if (id(focus_auto_config).state == "config_auto_unlocking") {
               ESP_LOGI("UI", "UNLOCKED, switching focus to unlocking");
-              id(page_auto_unlocking).show();     
+              id(page_auto_unlocking).show();
             } else {
               ESP_LOGI("UI", "UNLOCKED, switching focus to unlocked");
               id(page_auto_unlocked).show();
@@ -293,6 +375,46 @@ script:
             id(focus_auto_config).make_call().set_option("idle").perform();
             id(page_auto).show();
           }
+
+  - id: ui_display_mode_page
+    then:
+      - lambda: |-
+          if (id(ui_inputs_locked)) {
+            ESP_LOGI("UI", "ui_display_mode_page: inputs locked, skipping page update");
+            return;
+          }
+
+          if (id(ui_mode_select).state == "AUTO") {
+            id(ui_focus_update_auto).execute();
+          } else if (id(ui_mode_select).state == "MANUAL") {
+            id(page_manual).show();
+          } else if (id(ui_mode_select).state == "OFF") {
+            id(page_off).show();
+          }
+
+  - id: ui_start_post_provisioning_hold
+    then:
+      - logger.log:
+          level: INFO
+          format: "UI: starting post-provisioning hold"
+      - lambda: |-
+          id(ui_inputs_locked) = true;
+          id(ui_post_provisioning_ticks) = ${UI_TICKS_POST_PROVISIONING_HOLD};
+          id(oled).set_contrast(1.0f);
+          id(oled).set_brightness(1.0f);
+          id(page_init).show();
+
+  - id: ui_on_post_provisioning_hold_complete
+    then:
+      - logger.log:
+          level: INFO
+          format: "UI: post-provisioning hold complete, resuming mode"
+      - lambda: |-
+          id(ui_inputs_locked) = false;
+      - script.execute: ui_display_mode_page
+      - script.execute: ui_on_not_idle
+
+
 
 select:
   - platform: template
@@ -308,28 +430,21 @@ select:
       - "AUTO"
       - "MANUAL"
       - "OFF"
-      - "QR Code"
     on_value:
       then:
         - lambda: |-
-            switch (i) {
-              case 0: {
-                id(ui_focus_update_auto).execute();
-                id(purifier_mode).make_call().set_option(id(ui_mode_select).state).perform();
-              } break;
-              case 1:
-                id(page_manual).show();
-                id(purifier_mode).make_call().set_option(id(ui_mode_select).state).perform();
-                break;
-              case 2:
-                id(page_off).show();
-                id(purifier_mode).make_call().set_option(id(ui_mode_select).state).perform();
-                break;
-              case 3:
-                id(page_qr_code).show();
-                id(purifier_mode).make_call().set_option("AUTO").perform();
-                break;
+            if (id(network_hotspot_active)) {
+              ESP_LOGI("UI", "ui_mode_select.on_value: ignoring mode change while in provisioning hotspot");
+              return;
             }
+            ESP_LOGI("UI", "ui_mode_select.on_value, ui_mode_select='%s'; i='%d'", id(ui_mode_select).state.c_str(), i);
+            if (!id(ui_inputs_locked)) {
+              id(ui_display_mode_page).execute();
+            } else {
+              ESP_LOGI("UI", "ui_mode_select.on_value: UI locked, deferring page update");
+            }
+            id(purifier_mode).make_call().set_option(id(ui_mode_select).state).perform();
+
   - platform: template
     name: "UI: Focus AUTO config"
     id: focus_auto_config
@@ -399,7 +514,13 @@ binary_sensor:
     internal: true
     on_multi_click:
       - timing:
-          - ON for at least 0.3s
+          - ON for at least 4s
+          - OFF for at least 0.05s
+        then:
+          - script.execute: ui_force_setup_mode
+          - script.execute: network_switch_to_hotspot
+      - timing:
+          - ON for 0.3s to 3.9s
           - OFF for at least 0.05s
         then:
           - script.execute: ui_on_long_click
@@ -462,6 +583,12 @@ font:
     id: f10_lucidasans_regular
   - file: "fonts/luBS10.bdf"
     id: f10_lucidasans_bold
+
+qr_code:
+  - id: provisioning_qr_code
+    value: "WIFI:T:none;S:${device_name};"
+    #value: "foo"
+    ecc: LOW
 
 image:
   - file: "./images/push_small.png"
@@ -793,14 +920,60 @@ display:
       - id: page_off
         lambda: |-
           auto font_big = id(f10_lucidasans_bold);
+          auto font_tiny = id(f06_u8g2_squeezed);
           ui::draw_mode_header(it, font_big, "OFF", id(img_off));
 
-      - id: page_qr_code
-        lambda: |-
-          auto font_big = id(f10_lucidasans_bold);
-          ui::draw_mode_header(it, font_big, "QR code", id(img_turn));
+          if (esphome::wifi::global_wifi_component != nullptr) {
+              auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
+              for (auto &ip : addresses) {
+                  if (ip.is_set() && ip.is_ip4()) {
+                      it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "http://%s", ip.str().c_str());
+                      break;
+                  }
+              }
+          }
 
-      - id: page_provision
+      - id: page_init
         lambda: |-
+          using esphome::display::COLOR_ON;
+          using esphome::display::TextAlign;
+
           auto font_big = id(f10_lucidasans_bold);
-          ui::draw_mode_header(it, font_big, "PROVISION");
+          auto font_small = id(f08_lucidasans_regular);
+          auto font_tiny = id(f06_u8g2_squeezed);
+
+          if (id(network_hotspot_active)) {
+            ui::draw_mode_header_no_wifi(it, font_big, "INIT", id(img_turn));
+          
+            const char *setup_ssid = "${device_setup_ssid}";
+            const int text_x = 0;
+            int info_y = ui::Y_OFFSET_ICON_SUB_ROW1;
+  
+            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "scan or connect to ");
+            info_y += 8;
+            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "%s", setup_ssid);
+            info_y += 12;
+            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "and visit");
+            info_y += 8;
+            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "192.168.4.1");
+            info_y += 12;
+            info_y += 5;
+  
+            ui::draw_qr_code(it, id(provisioning_qr_code));
+          } else {
+            ui::draw_mode_header(it, font_big, "CONNECTED", id(img_turn));
+
+            if (esphome::wifi::global_wifi_component != nullptr) {
+              auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
+              for (auto &ip : addresses) {
+                  if (ip.is_set() && ip.is_ip4()) {
+                      it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "http://%s", ip.str().c_str());
+                      break;
+                  }
+              }
+            }
+          }
+
+        
+          
+      

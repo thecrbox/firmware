@@ -1,8 +1,21 @@
+substitutions:
+  device_name: "box2-0003"
+  device_setup_ssid: "box2-0003"
+  device_setup_password: "12345678"
+  # depending on the display version, we may want to override that
+  UI_DISPLAY_TYPE: "SH1106 128x64"
+  #UI_DISPLAY_TYPE: "SSD1305 128x64"
+  #UI_DISPLAY_TYPE: "SSD1306 128x64"
+
 esphome:
-  name: box2-0003
-  friendly_name: box2-0003
+  name: ${device_name}
+  friendly_name: ${device_name}
   min_version: 2025.5.0
   name_add_mac_suffix: false
+
+  platformio_options:
+    build_flags:
+      - "-DUSE_DISPLAY_QR_CODE"
 
   includes:
     - src/purifier_pid.h
@@ -32,14 +45,8 @@ packages:
 
 logger:
   level: INFO
-  baud_rate: 0
+  baud_rate: 115200
 
 preferences:
   # TODO: consider increasing further after we're done with development
   flash_write_interval: 1min
-
-substitutions:
-  # depending on the display version, we may want to override that
-  UI_DISPLAY_TYPE: "SH1106 128x64"
-  #UI_DISPLAY_TYPE: "SSD1305 128x64"
-  #UI_DISPLAY_TYPE: "SSD1306 128x64"

@@ -2,8 +2,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <string>
 #include "esphome/components/display/display_buffer.h"
 #include "esphome/components/image/image.h"
+#include "esphome/components/qr_code/qr_code.h"
+#include "esphome/components/wifi/wifi_component.h"
 
 namespace ui {
 
@@ -219,17 +222,25 @@ namespace ui {
     }
 
 // Generic mode header for other pages (MANUAL / OFF / QR / PROVISION)
-    inline void draw_mode_header(esphome::display::Display &it,
-                                 BaseFont *font_big,
-                                 const char *title,
-                                 esphome::display::BaseImage *img_left = nullptr,
-                                 esphome::display::BaseImage *img_right = nullptr) {
+    inline void draw_mode_header_no_wifi(esphome::display::Display &it,
+                                         BaseFont *font_big,
+                                         const char *title,
+                                         esphome::display::BaseImage *img_left = nullptr,
+                                         esphome::display::BaseImage *img_right = nullptr) {
         using esphome::display::COLOR_ON;
         if (img_left)
             it.image(0, 0, img_left, COLOR_ON);
         it.print(ICON+PADDING, 0, font_big, COLOR_ON, title);  // exact overload: (x,y,font,Color,const char*)
         if (img_right)
             it.image(W - ICON - (ICON+PADDING), 0, img_right, COLOR_ON);
+    }
+
+    inline void draw_mode_header(esphome::display::Display &it,
+                                 BaseFont *font_big,
+                                 const char *title,
+                                 esphome::display::BaseImage *img_left = nullptr,
+                                 esphome::display::BaseImage *img_right = nullptr) {
+        draw_mode_header_no_wifi(it, font_big, title, img_left, img_right);
 
         if (id(mywifi).is_connected()) {
             it.image(W - ICON, 0, &id(img_wifi3), COLOR_ON);
@@ -315,6 +326,19 @@ namespace ui {
         }
         if (text)
             it.printf(DESC_X, DESC_Y, font, COLOR_ON, TextAlign::TOP_LEFT, "%s", text);
+    }
+
+    inline void draw_qr_code(esphome::display::Display &it,
+                            esphome::qr_code::QrCode *qr_code_component,
+                            std::string val = "") {
+        using esphome::display::COLOR_ON;
+
+        constexpr int scale = 2;
+        auto size = id(qr_code_component).get_size() * scale; // Multiply by scale
+        auto x = (it.get_width()) - size;
+        auto y = (it.get_height() / 2) - (size / scale);
+
+        it.qr_code(x, y, qr_code_component, COLOR_ON, scale);
     }
 
 } // namespace ui

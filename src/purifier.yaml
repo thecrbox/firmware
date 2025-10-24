@@ -1,0 +1,370 @@
+#esphome:
+#  devices:
+#    - id: purifier
+#      name: "Purifier"
+#
+#web_server:
+#  sorting_groups:
+#    - id: sorting_group_purifier
+#      name: "Purifier"
+#      sorting_weight: 10
+#
+#    - id: sorting_group_purifier_config_auto
+#      name: "Purifier config AUTO"
+#      sorting_weight: 21
+#    - id: sorting_group_purifier_config_manual
+#      name: "Purifier config MANUAL"
+#      sorting_weight: 23
+#
+#    - id: sorting_group_purifier_config_auto_advanced
+#      name: "Purifier config AUTO (advanced)"
+#      sorting_weight: 50
+#
+#    - id: sorting_group_purifier_diagnostic
+#      name: "Purifier diagnostic"
+#      sorting_weight: 97
+
+#packages:
+#  - !include _purifier_internal.yaml
+
+switch:
+  - platform: template
+    id: unlock_purifier_config_auto_advanced
+    name: "Unlock advanced settings (60s)"
+    icon: "mdi:lock"
+    optimistic: true
+    restore_mode: always_off
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_config_auto_advanced
+      sorting_weight: -1
+    turn_on_action:
+      - delay: 60s
+      - switch.turn_off: unlock_purifier_config_auto_advanced
+
+output:
+  # common pwm for every fan
+  - platform: ledc
+    id: fans_pwm
+    pin: GPIO2
+    frequency: "25000 Hz"
+    min_power: 0%
+    max_power: 100%
+    zero_means_zero: true
+
+fan:
+  - platform: speed
+    id: fans_speed
+    restore_mode: NO_RESTORE
+    device_id: device_purifier
+    speed_count: 100
+    name: "Purifier Fan"
+    output: fans_pwm
+    web_server:
+      sorting_group_id: sorting_group_purifier
+
+select:
+  - platform: template
+    name: "Purifier Mode"
+    id: purifier_mode
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier
+    optimistic: true
+    internal: false
+    restore_value: true
+    options:
+      - "AUTO"
+      - "MANUAL"
+      - "OFF"
+
+packages:
+  - !include _purifier_internal.yaml
+
+sensor:
+  - platform: pulse_counter
+    pin:
+      number: GPIO21
+      mode:
+        input: true
+        pullup: false
+    unit_of_measurement: 'RPM'
+    id: fan1_rpm
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    internal: true
+    update_interval: 10s
+    name: "Fan1 RPM"
+    accuracy_decimals: 0
+    filters:
+      - multiply: 0.5
+      - throttle_average: 10s
+  - platform: pulse_counter
+    pin:
+      number: GPIO22
+      drive_strength: 40mA
+      mode:
+        input: true
+        pullup: false
+    unit_of_measurement: 'RPM'
+    id: fan2_rpm
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    internal: true
+    update_interval: 10s
+    name: "Fan2 RPM"
+    accuracy_decimals: 0
+    filters:
+      - multiply: 0.5
+      - throttle_average: 10s
+  - platform: pulse_counter
+    pin:
+      number: GPIO17
+      mode:
+        input: true
+        pullup: false
+    unit_of_measurement: 'RPM'
+    id: fan3_rpm
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    internal: true
+    update_interval: 10s
+    name: "Fan3 RPM"
+    accuracy_decimals: 0
+    filters:
+      - multiply: 0.5
+      - throttle_average: 10s
+  - platform: pulse_counter
+    pin:
+      number: GPIO16
+      drive_strength: 20mA
+      mode:
+        input: true
+        pullup: false
+    unit_of_measurement: 'RPM'
+    id: fan4_rpm
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    internal: true
+    update_interval: 10s
+    name: "Fan4 RPM"
+    accuracy_decimals: 0
+    filters:
+      - multiply: 0.5
+      - throttle_average: 10s
+  - platform: pulse_counter
+    pin:
+      number: GPIO35
+      drive_strength: 20mA
+      mode:
+        input: true
+        pullup: false
+    unit_of_measurement: 'RPM'
+    id: fan5_rpm
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    internal: true
+    update_interval: 10s
+    name: "Fan5 RPM"
+    accuracy_decimals: 0
+    filters:
+      - multiply: 0.5
+      - throttle_average: 10s
+
+
+  - platform: template
+    name: "Boost proportional"
+    id: diag_auto_fan_boost_proportional
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    icon: "mdi:rocket-launch"
+    entity_category: "diagnostic"
+    accuracy_decimals: 1
+    unit_of_measurement: "%"
+  - platform: template
+    name: "Boost derivative"
+    icon: "mdi:rocket-launch"
+    id: diag_auto_fan_boost_derivative
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    accuracy_decimals: 1
+    unit_of_measurement: "%"
+    entity_category: "diagnostic"
+  - platform: template
+    name: "Boost integral"
+    icon: "mdi:rocket-launch"
+    id: diag_auto_fan_boost_integral
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    accuracy_decimals: 1
+    unit_of_measurement: "%"
+    entity_category: "diagnostic"
+  - platform: template
+    name: "Delta target"
+    id: diag_auto_target_delta
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    icon: "mdi:arrow-expand-up"
+    entity_category: "diagnostic"
+    accuracy_decimals: 1
+    unit_of_measurement: µg/m³
+    update_interval: 1s
+    lambda: |-
+      float pm25f_target = id(cfg_pm25_target).state;
+      float pm25f_curr = id(sensor_pm_2_5).state;
+      float ret = pm25f_curr - pm25f_target;
+      return ret > 0 ? ret : 0;
+  - platform: template
+    name: "Delta previous"
+    id: diag_auto_prev_delta
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    icon: "mdi:chart-line"
+    accuracy_decimals: 1
+    entity_category: "diagnostic"
+    unit_of_measurement: µg/m³
+  - platform: template
+    name: "Fan limit"
+    id: diag_auto_fan_lvl_max
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    icon: "mdi:fan"
+    entity_category: "diagnostic"
+    accuracy_decimals: 0
+    unit_of_measurement: "%"
+  - platform: template
+    name: "Fan target auto"
+    icon: "mdi:fan"
+    id: diag_fan_speed_auto
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    accuracy_decimals: 1
+    unit_of_measurement: "%"
+    entity_category: "diagnostic"
+
+number:
+  - platform: template
+    name: "MANUAL: Fan"
+    id: cfg_fan_manual
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_config_manual
+    entity_category: "config"
+    unit_of_measurement: "%"
+    icon: "mdi:fan"
+    optimistic: true
+    restore_value: true
+    min_value: 0.0
+    max_value: 100.0
+    initial_value: 100
+    step: 1.0
+  - platform: template
+    name: "AUTO: Fan min"
+    id: cfg_fan_lvl_min
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_config_auto
+    entity_category: "config"
+    unit_of_measurement: "%"
+    icon: "mdi:fan"
+    optimistic: true
+    min_value: 20.0
+    max_value: 100.0
+    initial_value: 20
+    step: 1
+    restore_value: true
+  - platform: template
+    name: "AUTO: Fan max NIGHT"
+    id: cfg_fan_auto_night
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_config_auto
+    entity_category: "config"
+    unit_of_measurement: "%"
+    icon: "mdi:fan"
+    optimistic: true
+    min_value: 0.0
+    max_value: 100.0
+    initial_value: 50
+    step: 1.0
+    restore_value: true
+  - platform: template
+    name: "AUTO: Fan max DAY"
+    id: cfg_fan_auto_day
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_config_auto
+    entity_category: "config"
+    unit_of_measurement: "%"
+    icon: "mdi:fan"
+    optimistic: true
+    min_value: 0.0
+    max_value: 100.0
+    initial_value: 100
+    step: 1.0
+    restore_value: true
+  - platform: template
+    name: "AUTO: PM2.5 target"
+    id: cfg_pm25_target
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_config_auto
+    entity_category: "config"
+    unit_of_measurement: "µg/m³"
+    optimistic: true
+    min_value: 0.0
+    max_value: 20.0
+    initial_value: 5.0
+    step: 0.5
+    restore_value: true
+
+datetime:
+  - platform: template
+    name: "AUTO: Start of night mode"
+    id: cfg_auto_time_night
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_config_auto
+    type: time
+    optimistic: yes
+    initial_value: "22:00:00"
+    restore_value: true
+    icon: "mdi:sun"
+  - platform: template
+    name: "AUTO: Start of day mode"
+    id: cfg_auto_time_day
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_config_auto
+    type: time
+    optimistic: yes
+    initial_value: "07:00:00"
+    restore_value: true
+    icon: "mdi:moon"
+
+time:
+  platform: sntp
+  id: mysntp
+  timezone: Europe/Warsaw
+  on_time:
+    - seconds: /1
+      then:
+        - if:
+            condition:
+              wifi.connected:
+            then:
+              - lambda:  |-
+                  PID::Instance().Calculate();
+                  PID::Instance().Control();

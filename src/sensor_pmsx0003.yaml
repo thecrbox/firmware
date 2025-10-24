@@ -1,0 +1,57 @@
+packages:
+  - !include _sensor_internal.yaml
+
+uart:
+  tx_pin: ${SENSOR_UART_TX}
+  rx_pin: ${SENSOR_UART_RX}
+  baud_rate: 9600
+
+sensor:
+  - platform: pmsx003
+    type: PMSX003
+    update_interval: ${SENSOR_UPDATE_INTERVAL}
+    pm_1_0:
+      name: ${SENSOR_NAME_PM_1_0}
+      id: sensor_pm_1_0
+      device_id: device_sensor
+      accuracy_decimals: 1
+      web_server:
+        sorting_group_id: sorting_group_sensor
+      filters:
+        - throttle_average: 10s
+        - heartbeat: 10s
+        - filter_out: nan
+        - skip_initial: 3
+      on_raw_value:
+        then:
+          - lambda: id(sensor_pm_1_0_in).publish_state(x);
+    pm_2_5:
+      name: ${SENSOR_NAME_PM_2_5}
+      id: sensor_pm_2_5
+      device_id: device_sensor
+      accuracy_decimals: 1
+      web_server:
+        sorting_group_id: sorting_group_sensor
+      filters:
+        - throttle_average: 10s
+        - heartbeat: 10s
+        - filter_out: nan
+        - skip_initial: 3
+      on_raw_value:
+        then:
+          - lambda: id(sensor_pm_2_5_in).publish_state(x);
+    pm_10_0:
+      name: ${SENSOR_NAME_PM_10_0}
+      id: sensor_pm_10_0
+      device_id: device_sensor
+      accuracy_decimals: 1
+      web_server:
+        sorting_group_id: sorting_group_sensor
+      filters:
+        - throttle_average: 10s
+        - heartbeat: 10s
+        - filter_out: nan
+        - skip_initial: 3
+      on_raw_value:
+        then:
+          - lambda: id(sensor_pm_10_0_in).publish_state(x);

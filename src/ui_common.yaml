@@ -1,0 +1,22 @@
+substitutions:
+  UI_TICKS_TO_GO_IDLE: '300'
+  UI_TICKS_TO_SCREEN_DIM: '350'
+  UI_UNLOCK_CLICKS: '1'
+  UI_ENCODER_STEP: '2'
+
+esphome:
+  devices:
+    - id: device_interface
+      name: "Interface"
+
+web_server:
+  sorting_groups:
+    - id: sorting_group_interface
+      name: "Interface"
+      sorting_weight: 12
+    - id: sorting_group_interface_config_auto
+      name: "Config Interface AUTO"
+      sorting_weight: 22
+    - id: sorting_group_interface_config_manual
+      name: "Config Interface MANUAL"
+      sorting_weight: 21

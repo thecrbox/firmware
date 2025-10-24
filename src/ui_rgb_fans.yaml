@@ -1,0 +1,203 @@
+esphome:
+  includes:
+    - thebox/ui_rgb_fans_pm25fx.h
+
+number:
+  - platform: template
+    name: "MANUAL: brightness"
+    id: cfg_brightness_manual
+    device_id: device_interface
+    web_server:
+      sorting_group_id: sorting_group_interface_config_manual
+    entity_category: "config"
+    unit_of_measurement: "%"
+    icon: "mdi:brightness-percent"
+    optimistic: true
+    restore_value: true
+    min_value: 0.0
+    max_value: 100.0
+    initial_value: 100
+    step: 1.0
+  - platform: template
+    name: "AUTO: brightness NIGHT"
+    id: cfg_brightness_auto_night
+    device_id: device_interface
+    web_server:
+      sorting_group_id: sorting_group_interface_config_auto
+    entity_category: "config"
+    unit_of_measurement: "%"
+    icon: "mdi:brightness-percent"
+    optimistic: true
+    min_value: 0.0
+    max_value: 100.0
+    initial_value: 25
+    step: 1.0
+    restore_value: true
+  - platform: template
+    name: "AUTO: brightness DAY"
+    id: cfg_brightness_auto_day
+    device_id: device_interface
+    web_server:
+      sorting_group_id: sorting_group_interface_config_auto
+    entity_category: "config"
+    unit_of_measurement: "%"
+    icon: "mdi:brightness-percent"
+    optimistic: true
+    min_value: 0.0
+    max_value: 100.0
+    initial_value: 100
+    step: 1.0
+    restore_value: true
+
+light:
+  - platform: neopixelbus
+    variant: WS2812
+    pin: GPIO32
+    num_leds: 8
+    type: GRB
+    name: "RGB 1"
+    id: rgb1
+    device_id: device_interface
+    default_transition_length: 0s
+    internal: true
+    method:
+      type: esp32_rmt
+      channel: 0
+  - platform: neopixelbus
+    variant: WS2812
+    pin: GPIO33
+    num_leds: 8
+    type: GRB
+    name: "RGB 2"
+    id: rgb2
+    device_id: device_interface
+    default_transition_length: 0s
+    internal: true
+    method:
+      type: esp32_rmt
+      channel: 1
+  - platform: neopixelbus
+    variant: WS2812
+    pin: GPIO25
+    num_leds: 8
+    type: GRB
+    name: "RGB 3"
+    id: rgb3
+    device_id: device_interface
+    default_transition_length: 0s
+    internal: true
+    method:
+      type: esp32_rmt
+      channel: 2
+  - platform: neopixelbus
+    variant: WS2812
+    pin: GPIO26
+    num_leds: 8
+    type: GRB
+    name: "RGB 4"
+    id: rgb4
+    device_id: device_interface
+    default_transition_length: 0s
+    internal: true
+    method:
+      type: esp32_rmt
+      channel: 3
+  - platform: neopixelbus
+    variant: WS2812
+    pin: GPIO27
+    num_leds: 8
+    type: GRB
+    name: "RGB 5"
+    id: rgb5
+    device_id: device_interface
+    default_transition_length: 0s
+    internal: true
+    method:
+      type: esp32_rmt
+      channel: 4
+  - platform: partition
+    default_transition_length: 0s
+    name: "RGB All"
+    id: all_fans_rgb
+    device_id: device_interface
+    restore_mode: ALWAYS_OFF
+    web_server:
+      sorting_group_id: sorting_group_interface
+    # include each strip in one big addressable light
+    segments:
+      - id: rgb1
+        from: 0
+        to: 7     # Fan1 ring
+      - id: rgb2
+        from: 0
+        to: 7      # Fan2 ring
+      - id: rgb3
+        from: 0
+        to: 7      # Fan3 ring
+      - id: rgb4
+        from: 0
+        to: 7      # Fan4 ring
+      - id: rgb5
+        from: 0
+        to: 7      # Fan5 ring
+
+    effects:
+      - addressable_lambda:
+          name: "PM2.5 Boot Sweep"
+          update_interval: 150ms
+          lambda: |-
+            float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
+            thebox_light_effects::pm25_boot_sweep(it, speed);
+
+      - addressable_lambda:
+          name: "PM2.5 State"
+          update_interval: 33ms
+          lambda: |-
+            float pm25 = id(sensor_pm_2_5).state;
+            float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
+            thebox_light_effects::pm25_state(it, pm25, speed);
+
+
+interval:
+  - interval: 100ms
+    then:
+      - lambda: |-
+          if (id(purifier_mode).state == "MANUAL") {
+            // just set to manual brightness
+            int brightness = (int)id(cfg_brightness_manual).state;
+            id(all_fans_rgb).turn_on().set_effect("PM2.5 State").set_brightness(brightness / 100.0f).perform();
+          } else if (id(purifier_mode).state == "AUTO") {
+            auto td = id(cfg_auto_time_day).state_as_esptime();
+            auto tn = id(cfg_auto_time_night).state_as_esptime();
+            auto t = id(mysntp).now();
+            
+            bool day_mode = true;
+            if (td.hour < tn.hour || (td.hour == tn.hour && td.minute < tn.minute)) {
+              // normal case: day starts before night
+              day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) &&
+                         (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+            } else {
+              // special case: day starts after night (overnight)
+              day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) ||
+                         (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+            }
+          
+            int brightness = 0;
+            if (day_mode) {
+              brightness = (int)id(cfg_brightness_auto_day).state;
+            } else {
+              brightness = (int)id(cfg_brightness_auto_night).state;
+            }
+            id(all_fans_rgb).turn_on().set_effect("PM2.5 State").set_brightness(brightness / 100.0f).perform();
+          } else {
+            // some other state; off?
+            id(all_fans_rgb).turn_off().set_brightness(0.0f).perform();
+          }
+          
+
+#
+#          int brightness = day_mode ? (int)id(cfg_brightness_auto_day).state : (int)id(cfg_brightness_auto_night).state;
+#          if (!day_night_auto) {
+#            brightness = (int)id(cfg_brightness_manual).state;
+#          }
+

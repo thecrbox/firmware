@@ -1,0 +1,43 @@
+packages:
+  - !include _sensor_internal.yaml
+
+number:
+  - platform: template
+    name: ${SENSOR_NAME_PM_1_0}
+    id: sensor_pm_1_0
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    unit_of_measurement: "µg/m³"
+    icon: "mdi:air-filter"
+    optimistic: true
+    min_value: 0.0
+    max_value: 50.0
+    initial_value: 4.0
+    step: 0.5
+  - platform: template
+    name: ${SENSOR_NAME_PM_2_5}
+    id: sensor_pm_2_5
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    unit_of_measurement: "µg/m³"
+    icon: "mdi:air-filter"
+    optimistic: true
+    min_value: 0.0
+    max_value: 50.0
+    initial_value: 7.0
+    step: 0.5
+  - platform: template
+    name: ${SENSOR_NAME_PM_10_0}
+    id: sensor_pm_10_0
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    unit_of_measurement: "µg/m³"
+    icon: "mdi:air-filter"
+    optimistic: true
+    min_value: 0.0
+    max_value: 50.0
+    initial_value: 11.0
+    step: 0.5

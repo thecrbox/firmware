@@ -1,0 +1,806 @@
+esphome:
+  includes:
+    - src/ui_draw.h
+
+i2c:
+  - id: bus_a
+    sda: ${UI_DISPLAY_I2C_SDA}
+    scl: ${UI_DISPLAY_I2C_SCL}
+    scan: false
+    frequency: 400kHz
+
+globals:
+  - id: ui_tick_auto_idle
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: ui_tick_manual_idle
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: ui_tick_screen_dim
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: ui_auto_config_unlock_clicks
+    # 0..UI_UNLOCK_CLICKS-1 = unlocking
+    # UI_UNLOCK_CLICKS = unlocked
+    type: int
+    restore_value: false
+    initial_value: '0'
+
+interval:
+#  - interval: 10s
+#    then:
+#      - lambda: |-
+#          id(oled).request_dump();
+
+  - interval: 100ms
+    then:
+      - script.execute: ui_tick
+
+script:
+  - id: ui_tick
+    then:
+      - lambda: |-
+          // Keep UI mode in sync with purifier mode
+          if (id(purifier_mode).state != id(ui_mode_select).state) {
+            id(ui_mode_select).make_call().set_option(id(purifier_mode).state).perform();
+          }
+          
+          auto fn_idler_auto = []() {
+            id(focus_auto_config).make_call().set_option("idle").perform();
+            id(ui_tick_auto_idle) = ${UI_TICKS_TO_GO_IDLE};
+            id(ui_auto_config_unlock_clicks) = 0;
+          };
+          
+          auto fn_idler_manual = []() {
+            id(focus_manual).make_call().set_option("idle").perform();
+            id(ui_tick_manual_idle) = ${UI_TICKS_TO_GO_IDLE};
+          };
+          
+          auto fn_idler_screen_dim = []() {
+            ESP_LOGI("UI", "Dimming screen");
+            id(oled).set_contrast(0.02f);
+            id(oled).set_brightness(0.02f);
+            id(ui_tick_screen_dim) = ${UI_TICKS_TO_SCREEN_DIM};
+          };
+          
+          if (id(ui_tick_screen_dim) < ${UI_TICKS_TO_SCREEN_DIM}) {
+            id(ui_tick_screen_dim) += 1;
+            if (id(ui_tick_screen_dim) >= ${UI_TICKS_TO_SCREEN_DIM}) {
+              fn_idler_screen_dim();
+            }
+          }
+          
+          if (id(ui_mode_select).state == "AUTO") {
+            fn_idler_manual();
+            if (id(ui_tick_auto_idle) < ${UI_TICKS_TO_GO_IDLE}) {
+              id(ui_tick_auto_idle) += 1;
+              if (id(ui_tick_auto_idle) >= ${UI_TICKS_TO_GO_IDLE}) {
+                fn_idler_auto();
+                id(ui_focus_update_auto).execute();
+              }
+            }
+          } else if (id(ui_mode_select).state == "MANUAL") {
+            fn_idler_auto();
+            if (id(ui_tick_manual_idle) < ${UI_TICKS_TO_GO_IDLE}) {
+              id(ui_tick_manual_idle) += 1;
+              if (id(ui_tick_manual_idle) >= ${UI_TICKS_TO_GO_IDLE}) {
+                fn_idler_manual();
+              }
+            }
+          } else if (id(ui_mode_select).state == "OFF") {
+            fn_idler_manual();
+            fn_idler_auto();
+          } else if (id(ui_mode_select).state == "QR Code") {
+            fn_idler_manual();
+            fn_idler_auto();
+          }
+  
+
+  - id: ui_on_not_idle
+    then:
+      - logger.log:
+          level: INFO
+          format: "NOT IDLE"
+      - globals.set:
+          id: ui_tick_auto_idle
+          value: '0'
+      - globals.set:
+          id: ui_tick_manual_idle
+          value: '0'
+      - globals.set:
+          id: ui_tick_screen_dim
+          value: '0'
+      - lambda: |-
+          id(oled).set_contrast(1.0f);
+          id(oled).set_brightness(1.0f);
+
+  # short click - toggle focus
+  - id: ui_on_click
+    then:
+      - logger.log:
+          level: INFO
+          format: "Short click - toggling focus"
+
+      - if:
+          condition:
+            lambda: 'return id(ui_mode_select).state == "AUTO";'
+          then:
+            - logger.log:
+                level: INFO
+                format: "Short click - toggling focus AUTO"
+            # click a couple of times until unlocked, then cycle focus
+            - lambda: |-
+                if (id(ui_auto_config_unlock_clicks) < ${UI_UNLOCK_CLICKS}) {
+                  id(ui_auto_config_unlock_clicks) += 1;
+                }
+                id(ui_focus_update_auto).execute();
+            - script.execute: ui_on_not_idle
+      - if:
+          condition:
+            - lambda: 'return id(ui_mode_select).state == "MANUAL";'
+          then:
+            - logger.log:
+                level: INFO
+                format: "Short click - toggling focus MANUAL"
+            - select.next: focus_manual
+      - if:
+          condition:
+            - lambda: 'return id(ui_mode_select).state == "OFF";'
+          then:
+            - logger.log:
+                level: INFO
+                format: "Short click - toggling focus OFF"
+            - select.next: focus_off
+
+  # long click - toggle mode
+  - id: ui_on_long_click
+    then:
+      - logger.log: "Long click - toggling mode"
+      - script.execute: ui_on_not_idle
+      - select.next: ui_mode_select
+
+  - id: ui_on_rotate
+    mode: queued
+    parameters:
+      dir: int     # +1 = right, -1 = left
+    then:
+      - script.execute: ui_on_not_idle
+      - lambda: |-
+          // helper to advance a template select one step
+          auto select_next = [](auto &sel) {
+            sel->make_call().select_next(true).perform();
+          };
+          
+          auto select_previous = [](auto &sel) {
+            sel->make_call().select_previous(true).perform();
+          };
+          
+          const int step = (dir > 0 ? +${UI_ENCODER_STEP} : -${UI_ENCODER_STEP});
+
+          if (id(ui_mode_select).state == "AUTO") {
+            if (id(focus_auto_config).state == "idle") {
+              if (dir > 0) {
+                select_next(id(focus_auto_quality));
+              } else {
+                select_previous(id(focus_auto_quality));
+              }
+            } else if (id(focus_auto_config).state == "config_auto_unlocking") {
+              id(ui_auto_config_unlock_clicks) = 0;
+              id(ui_focus_update_auto).execute();
+            } else if (id(focus_auto_config).state == "config_auto_night_time") {
+              id(ui_shift_time_30m).execute(false, dir);
+            } else if (id(focus_auto_config).state == "config_auto_night_fan") {
+              id(cfg_fan_auto_night).make_call()
+                .set_value(std::clamp(id(cfg_fan_auto_night).state + step, 0.0f, 100.0f)).perform();
+              PID::Instance().Control();
+            } else if (id(focus_auto_config).state == "config_auto_night_rgb") {
+              id(cfg_brightness_auto_night).make_call()
+                .set_value(std::clamp(id(cfg_brightness_auto_night).state + step, 0.0f, 100.0f)).perform();
+            } else if (id(focus_auto_config).state == "config_auto_day_time") {
+              id(ui_shift_time_30m).execute(true, dir);
+            } else if (id(focus_auto_config).state == "config_auto_day_fan") {
+              id(cfg_fan_auto_day).make_call()
+                .set_value(std::clamp(id(cfg_fan_auto_day).state + step, 0.0f, 100.0f)).perform();
+              PID::Instance().Control();
+            } else if (id(focus_auto_config).state == "config_auto_day_rgb") {
+              id(cfg_brightness_auto_day).make_call()
+                .set_value(std::clamp(id(cfg_brightness_auto_day).state + step, 0.0f, 100.0f)).perform();
+            }
+          } else if (id(ui_mode_select).state == "MANUAL") {
+            if (id(focus_manual).state == "idle") {
+              // no-op
+            } else if (id(focus_manual).state == "config_manual_fan") {
+              id(cfg_fan_manual).make_call()
+                .set_value(std::clamp(id(cfg_fan_manual).state + step, 0.0f, 100.0f)).perform();
+              PID::Instance().Control();
+            } else if (id(focus_manual).state == "config_manual_rgb") {
+              id(cfg_brightness_manual).make_call()
+                .set_value(std::clamp(id(cfg_brightness_manual).state + step, 0.0f, 100.0f)).perform();
+            }
+          } else if (id(ui_mode_select).state == "OFF") {
+            select_next(id(focus_off));
+          }
+          
+
+  - id: ui_shift_time_30m
+    mode: single
+    parameters:
+      day: bool   # false = night, true = day
+      dir: int    # +1 next, -1 prev
+    then:
+      - lambda: |-
+          int total;
+          int mod;
+          int second = 0;
+          if (day) {
+            auto t = id(cfg_auto_time_day).state_as_esptime();
+            total = int(t.hour) * 60 + int(t.minute);
+            mod = t.minute % 30;
+            second = t.second;
+          } else {
+            auto t = id(cfg_auto_time_night).state_as_esptime();
+            total = int(t.hour) * 60 + int(t.minute);
+            mod = t.minute % 30;
+            second = t.second;
+          }
+
+          if (dir >= 0) {
+            // Next :00/:30 (1–30 min forward)
+            int bump = (mod == 0 && second == 0) ? 30 : (30 - mod);
+            total = (total + bump) % (24 * 60);
+          } else {
+            // Previous :00/:30 (1–30 min back)
+            int back = (mod == 0 && second == 0) ? 30 : mod;
+            total -= back;
+            if (total < 0) total += 24 * 60;
+          }
+
+          char buf[9];
+          snprintf(buf, sizeof(buf), "%02d:%02d:00", total / 60, total % 60);
+
+          if (day) {
+            id(cfg_auto_time_day).make_call().set_time(buf).perform();
+          } else {
+            id(cfg_auto_time_night).make_call().set_time(buf).perform();
+          }
+  - id: ui_focus_update_auto
+    then:
+      - lambda: |-
+          bool unlocked = (id(ui_auto_config_unlock_clicks) >= ${UI_UNLOCK_CLICKS});
+          bool unlocking = (!unlocked) && (id(ui_auto_config_unlock_clicks) > 0);
+          
+          if (unlocked) {
+            id(focus_auto_config).make_call().select_next(true).perform();
+            if (id(focus_auto_config).state == "idle") {
+              ESP_LOGI("UI", "UNLOCKED, switching focus to idle");
+              id(page_auto).show();
+            } else if (id(focus_auto_config).state == "config_auto_unlocking") {
+              ESP_LOGI("UI", "UNLOCKED, switching focus to unlocking");
+              id(page_auto_unlocking).show();     
+            } else {
+              ESP_LOGI("UI", "UNLOCKED, switching focus to unlocked");
+              id(page_auto_unlocked).show();
+            }
+          } else if (unlocking) {
+            ESP_LOGI("UI", "focus auto UNLOCKING, switching to unlocking");
+            id(focus_auto_config).make_call().set_option("config_auto_unlocking").perform();
+            id(page_auto_unlocking).show();
+          } else {
+            ESP_LOGI("UI", "focus auto IDLE, switching to idle");
+            id(focus_auto_config).make_call().set_option("idle").perform();
+            id(page_auto).show();
+          }
+
+select:
+  - platform: template
+    name: "UI: Interface Mode"
+    id: ui_mode_select
+    device_id: device_interface
+    web_server:
+      sorting_group_id: sorting_group_interface
+    optimistic: true
+    internal: true
+    restore_value: true
+    options:
+      - "AUTO"
+      - "MANUAL"
+      - "OFF"
+      - "QR Code"
+    on_value:
+      then:
+        - lambda: |-
+            switch (i) {
+              case 0: {
+                id(ui_focus_update_auto).execute();
+                id(purifier_mode).make_call().set_option(id(ui_mode_select).state).perform();
+              } break;
+              case 1:
+                id(page_manual).show();
+                id(purifier_mode).make_call().set_option(id(ui_mode_select).state).perform();
+                break;
+              case 2:
+                id(page_off).show();
+                id(purifier_mode).make_call().set_option(id(ui_mode_select).state).perform();
+                break;
+              case 3:
+                id(page_qr_code).show();
+                id(purifier_mode).make_call().set_option("AUTO").perform();
+                break;
+            }
+  - platform: template
+    name: "UI: Focus AUTO config"
+    id: focus_auto_config
+    device_id: device_interface
+    optimistic: true
+    internal: true
+    restore_value: false
+    options:
+      - "idle"
+      - "config_auto_unlocking"
+      - "config_auto_day_time"
+      - "config_auto_day_fan"
+      - "config_auto_day_rgb"
+      - "config_auto_night_time"
+      - "config_auto_night_fan"
+      - "config_auto_night_rgb"
+  - platform: template
+    name: "UI: Focus QUALITY"
+    id: focus_auto_quality
+    device_id: device_interface
+    optimistic: true
+    internal: true
+    restore_value: false
+    options:
+#      - "aqi"
+      - "aqi2"
+#      - "aqi3"
+#      - "aqi4"
+#      - "pm_1"
+      - "pm_2_5"
+#      - "pm_4_0"
+#      - "pm_10_0"
+      - "nox"
+#      - "voc"
+      - "temp_and_humidity"
+  - platform: template
+    name: "UI: Focus MANUAL"
+    id: focus_manual
+    device_id: device_interface
+    optimistic: true
+    internal: true
+    restore_value: false
+    options:
+      - "idle"
+      - "config_manual_fan"
+      - "config_manual_rgb"
+  - platform: template
+    name: "UI: Focus OFF"
+    id: focus_off
+    device_id: device_interface
+    optimistic: true
+    internal: true
+    restore_value: false
+    options:
+      - "idle"
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: ${UI_ENCODER_SW}
+      inverted: true
+      mode:
+        input: true
+    id: button_encoder
+    name: "UI: Button"
+    device_id: device_interface
+    internal: true
+    on_multi_click:
+      - timing:
+          - ON for at least 0.3s
+          - OFF for at least 0.05s
+        then:
+          - script.execute: ui_on_long_click
+      - timing:
+          - ON for at most 0.3s
+          - OFF for at least 0.05s
+        then:
+          - script.execute: ui_on_click
+
+sensor:
+  - platform: rotary_encoder
+    name: "UI: Encoder"
+    id: encoder_value
+    device_id: device_interface
+    internal: true
+    pin_a:
+      number: ${UI_ENCODER_A}
+      inverted: false
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+    pin_b:
+      number: ${UI_ENCODER_B}
+      inverted: false
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+    on_clockwise:
+      then:
+        - script.execute:
+            id: ui_on_rotate
+            dir: 1
+    on_anticlockwise:
+      then:
+        - script.execute:
+            id: ui_on_rotate
+            dir: -1
+    filters:
+      - throttle: 0.20s
+
+font:
+  - file: "fonts/font_tiny5.bdf"
+    id: f05_tiny
+  - file: "fonts/tiny5-Regular.bdf"
+    id: f05_tinyregular
+  - file: "fonts/u8g2_squeezed_regular_6.bdf"
+    id: f06_u8g2_squeezed
+
+  # lucida 08
+  - file: "fonts/luRS08.bdf"
+    id: f08_lucidasans_regular
+    glyphsets:
+      - GF_Latin_Kernel
+    glyphs: [µ,³]
+
+  # lucida 10
+  - file: "fonts/luRS10.bdf"
+    id: f10_lucidasans_regular
+  - file: "fonts/luBS10.bdf"
+    id: f10_lucidasans_bold
+
+image:
+  - file: "./images/push_small.png"
+    id: img_push_small
+    type: BINARY
+  - file: "./images/turn_small.png"
+    id: img_turn_small
+    type: BINARY
+  - file: "./images/turn2.png"
+    id: img_turn
+    type: BINARY
+  - file: "images/wrench.png"
+    id: img_wrench
+    type: BINARY
+  - file: "images/robot.png"
+    id: img_auto
+    type: BINARY
+  - file: "images/hand.png"
+    id: img_manual
+    type: BINARY
+  - file: "images/skull.png"
+    id: img_off
+    type: BINARY
+  - file: "images/lock.png"
+    id: img_lock
+    type: BINARY
+  - file: "images/lock_open.png"
+    id: img_lock_open
+    type: BINARY
+  - file: "images/sun.png"
+    id: img_sun
+    type: BINARY
+  - file: "images/moon.png"
+    id: img_moon
+    type: BINARY
+  - file: "images/light_on.png"
+    id: img_light_on
+    type: BINARY
+  - file: "images/light_off.png"
+    id: img_light_off
+    type: BINARY
+  - file: "images/arrow_right.png"
+    id: img_arrow_right
+    type: BINARY
+  - file: "images/arrow_left.png"
+    id: img_arrow_left
+    type: BINARY
+  - file: "images/clock.png"
+    id: img_clock
+    type: BINARY
+  - file: "images/fan_on.png"
+    id: img_fan_on
+    type: BINARY
+  - file: "images/fan_off.png"
+    id: img_fan_off
+    type: BINARY
+  - file: "images/mask.png"
+    id: img_mask
+    type: BINARY
+  - file: "images/wifi0.png"
+    id: img_wifi0
+    type: BINARY
+  - file: "images/wifi3.png"
+    id: img_wifi3
+    type: BINARY
+  - file: "images/cigarette.png"
+    id: img_cigarette
+    type: BINARY
+  - file: "images/lungs.png"
+    id: img_lungs
+    type: BINARY
+  - file: "images/gastube.png"
+    id: img_gastube
+    type: BINARY
+  - file: "images/wind.png"
+    id: img_wind
+    type: BINARY
+  - file: "images/thermometer.png"
+    id: img_thermometer
+    type: BINARY
+  - file: "images/droplet.png"
+    id: img_droplet
+    type: BINARY
+
+display:
+  - platform: ${UI_DISPLAY_PLATFORM}
+    model: ${UI_DISPLAY_TYPE}
+    i2c_id: bus_a
+    address: 0x3C
+    id: oled
+    update_interval: 200ms
+    contrast: 100%
+    brightness: 100%
+
+    pages:
+      - id: page_auto
+        lambda: |-
+          auto font_big    = id(f10_lucidasans_bold);
+          auto font_value  = id(f10_lucidasans_regular);
+          auto font_small  = id(f08_lucidasans_regular);
+          auto font_tiny  = id(f06_u8g2_squeezed);
+
+          auto t = id(mysntp).now();
+          auto td = id(cfg_auto_time_day).state_as_esptime();
+          auto tn = id(cfg_auto_time_night).state_as_esptime();          
+          bool day_mode = true;
+          if (td.hour < tn.hour || (td.hour == tn.hour && td.minute < tn.minute)) {
+            // normal case: day starts before night
+            day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) &&
+                       (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+          } else {
+            // special case: day starts after night (overnight)
+            day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) ||
+                       (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+          }
+    
+          // Header: AUTO + sun/moon
+          ui::draw_mode_header(it, font_big, "AUTO", id(img_auto), day_mode ? id(img_sun) : id(img_moon));
+    
+          // Right-side icons
+          const int x0 = ui::right_icon_x(0);
+          const int x1 = ui::right_icon_x(1);
+    
+          const int bright = id(all_fans_rgb).current_values.is_on()
+                           ? ui::clamp_pct((int) (id(all_fans_rgb).current_values.get_brightness() * 100.0f))
+                           : 0;
+          const int speed  = id(fans_speed).state ? ui::clamp_pct((int) id(fans_speed).speed) : 0;
+    
+          ui::draw_icon_and_value(it, x0, ui::Y_ICONS, id(img_light_on), font_small, bright);
+          ui::draw_icon_and_value(it, x1, ui::Y_ICONS, id(img_fan_on),   font_small, speed);
+          
+          if (id(focus_auto_quality).state == "aqi") {
+            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            ui::draw_gauge_title_left(it, ui::X_OFFSET_ICONS, ui::ICON,
+                                        ui::X_OFFSET_ICONS, ui::X_OFFSET_ICONS - ui::BAR_H,
+                                        id(sensor_aqi_value).state, 500,
+                                        title.c_str(),
+                                        font_value, font_value);
+          } else if (id(focus_auto_quality).state == "aqi2") {
+            it.printf(0, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "AQI");
+            std::string title = id(sensor_aqi_category).state;
+            ui::draw_gauge_title_center(it, ui::X_OFFSET_ICONS, ui::ICON,
+                                        ui::X_OFFSET_ICONS, ui::X_OFFSET_ICONS - ui::BAR_H,
+                                        id(sensor_aqi_value).state, 500,
+                                        title.c_str(),
+                                        font_value, font_value);
+          } else if (id(focus_auto_quality).state == "aqi3") {
+            std::string title = "AQI:" + id(sensor_aqi_category).state;
+            ui::draw_gauge_title_left(it, ui::BAR_W, ui::ICON,
+                                        ui::BAR_W, ui::BAR_W - ui::BAR_H,
+                                        id(sensor_aqi_value).state, 500,
+                                        title.c_str(),
+                                        font_small, font_small);
+          } else if (id(focus_auto_quality).state == "aqi4") {
+            std::string title = id(sensor_aqi_category).state;
+            ui::draw_gauge_title_center(it, ui::BAR_W, ui::ICON,
+                                        ui::BAR_W, ui::BAR_W - ui::BAR_H,
+                                        id(sensor_aqi_value).state, 500,
+                                        title.c_str(),
+                                        font_small, font_small);
+          } else if (id(focus_auto_quality).state == "temp_and_humidity") {
+            // icons
+            const int x2 = ui::right_icon_x(2);
+            const int x3 = ui::right_icon_x(3);
+            std::string v1 = std::to_string((int)id(sensor_temperature_in).state) + "°C";
+            std::string v2 = std::to_string((int)id(sensor_humidity_in).state) + "%";
+            ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_thermometer), font_small, v1.c_str());
+            ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_droplet),   font_small, v2.c_str());
+            it.printf(x2 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "tem");
+            it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "hum");
+            // title
+            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
+          } else if (id(focus_auto_quality).state == "pm_2_5") {
+            // icons
+            const int x2 = ui::right_icon_x(2);
+            const int x3 = ui::right_icon_x(3);
+            std::string v1 = std::to_string((int)id(sensor_pm_2_5_in).state);
+            std::string v2 = std::to_string((int)id(sensor_pm_10_0_in).state);
+            ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_cigarette), font_small, v1.c_str());
+            ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_wind),   font_small, v2.c_str());
+            it.printf(x2 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "2.5");
+            it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "10");
+            // title
+            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
+          } else if (id(focus_auto_quality).state == "nox") {
+            // icons
+            const int x2 = ui::right_icon_x(2);
+            const int x3 = ui::right_icon_x(3);
+            std::string v1 = std::to_string((int)id(sensor_nox_in).state);
+            std::string v2 = std::to_string((int)id(sensor_voc_in).state);
+            ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_lungs), font_small, v1.c_str());
+            ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_gastube),   font_small, v2.c_str());
+            it.printf(x2 - ui::X_OFFSET_ICONS/2-3, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "NOX");
+            it.printf(x3 - ui::X_OFFSET_ICONS/2-1, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "VOC");
+            // title
+            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
+          } else {
+            const int x3 = ui::right_icon_x(3);
+            ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_wind),   font_small, "xxx");
+            it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "UNIMPLEMENTED");
+          }
+
+      - id: page_auto_unlocking
+        lambda: |-
+          auto font_big   = id(f10_lucidasans_bold);
+          auto font_small = id(f08_lucidasans_regular);
+    
+          ui::draw_auto_header_wrench(it, id(img_auto), id(img_wrench));
+    
+          bool unlocked     = (id(ui_auto_config_unlock_clicks) >= ${UI_UNLOCK_CLICKS});
+          bool unlocking    = (!unlocked) && (id(ui_auto_config_unlock_clicks) > 1);
+          int clicks_needed = ${UI_UNLOCK_CLICKS} - id(ui_auto_config_unlock_clicks);
+    
+          if (unlocking) {
+            if (clicks_needed > 1) {
+              // Center "X clicks to edit" roughly over title area
+              ui::printf_center_between(it, ui::ICON*2, ui::W, 1, font_small, "%d clicks to edit", clicks_needed);
+            } else {
+              // turn=back, push=edit
+              ui::draw_hints_pair(it, id(img_turn_small), "back", id(img_push_small), "edit", font_small);
+            }
+          } else if (unlocked) {
+            ui::draw_hints_pair(it, id(img_turn_small), "back", id(img_push_small), "edit", font_small);
+          }
+    
+          // Icon rows: brightness day/night, fan day/night, clock with two times
+          const int x0 = ui::right_icon_x(0);
+          const int x1 = ui::right_icon_x(1);
+          const int x2 = ui::right_icon_x(2);
+    
+          auto td = id(cfg_auto_time_day).state_as_esptime();
+          auto tn = id(cfg_auto_time_night).state_as_esptime();
+    
+          ui::draw_icon_and_value(it, x0, ui::Y_ICONS, id(img_light_on), font_small,
+                              (int) id(cfg_brightness_auto_day).state,
+                              (int) id(cfg_brightness_auto_night).state);
+    
+          ui::draw_icon_and_value(it, x1, ui::Y_ICONS, id(img_fan_on), font_small,
+                              (int) id(cfg_fan_auto_day).state,
+                              (int) id(cfg_fan_auto_night).state);
+    
+          it.image(x2, ui::Y_ICONS, id(img_clock), ImageAlign::TOP_CENTER, COLOR_ON);
+          ui::print_time_centered(it, x2, ui::Y_ICONS + ui::Y_OFFSET_ICON_SUB_ROW1,  font_small, td.hour, td.minute);
+          ui::print_time_centered(it, x2, ui::Y_ICONS + ui::Y_OFFSET_ICON_SUB_ROW2, font_small, tn.hour, tn.minute);
+    
+          // sun/moon badges on the left bottom corner for each row
+          it.image(0, ui::H - ui::ICON - 19, id(img_sun),  COLOR_ON);
+          it.image(0, ui::H - ui::ICON,      id(img_moon), COLOR_ON);
+
+      - id: page_auto_unlocked
+        lambda: |-
+          auto font_big   = id(f10_lucidasans_bold);
+          auto font_small = id(f08_lucidasans_regular);
+    
+          ui::draw_auto_header_wrench(it, id(img_auto), id(img_wrench));
+          // Unlocked header hints: turn=edit, push=next
+          ui::draw_hints_pair(it, id(img_turn_small), "edit", id(img_push_small), "next", font_small);
+    
+          bool day_mode = (id(focus_auto_config).state == "config_auto_day_time" ||
+                           id(focus_auto_config).state == "config_auto_day_fan"  ||
+                           id(focus_auto_config).state == "config_auto_day_rgb");
+    
+          int brightness = day_mode ? (int) id(cfg_brightness_auto_day).state
+                                    : (int) id(cfg_brightness_auto_night).state;
+          int fan        = day_mode ? (int) id(cfg_fan_auto_day).state
+                                    : (int) id(cfg_fan_auto_night).state;
+          auto t = day_mode ? id(cfg_auto_time_day).state_as_esptime()
+                            : id(cfg_auto_time_night).state_as_esptime();
+    
+          // Bottom corner badge
+          it.image(0, ui::H - ui::ICON - 19, day_mode ? id(img_sun) : id(img_moon), COLOR_ON);
+    
+          const int x0 = ui::right_icon_x(0);
+          const int x1 = ui::right_icon_x(1);
+          const int x2 = ui::right_icon_x(2);
+    
+          // focus marker + desc
+          const int marker_y = ui::Y_ICONS + 1;
+          int focus_idx = ui::focus_index_from_state(id(focus_auto_config).state.c_str());
+          ui::draw_focus_marker(it, focus_idx, marker_y, id(img_arrow_right));
+          ui::draw_focus_desc_auto(it, font_small, day_mode, focus_idx);
+    
+          // icon rows + time
+          ui::draw_icon_and_value(it, x0, ui::Y_ICONS, id(img_light_on), font_small, brightness);
+          ui::draw_icon_and_value(it, x1, ui::Y_ICONS, id(img_fan_on),   font_small, fan);
+          it.image(x2, ui::Y_ICONS, id(img_clock), ImageAlign::TOP_CENTER, COLOR_ON);
+          ui::print_time_centered(it, x2, ui::Y_ICONS + ui::Y_OFFSET_ICON_SUB_ROW1,  font_small, t.hour, t.minute);
+
+      - id: page_manual
+        lambda: |-
+          auto font_big    = id(f10_lucidasans_bold);
+          auto font_value  = id(f10_lucidasans_regular);
+          auto font_small  = id(f08_lucidasans_regular);
+          auto font_tiny  = id(f06_u8g2_squeezed);
+          if (id(focus_manual).state == "idle") {
+            ui::draw_mode_header(it, font_big, "MANUAL", id(img_manual));
+            
+            const int x2 = ui::right_icon_x(2);
+            const int x3 = ui::right_icon_x(3);
+            std::string v1 = std::to_string((int)id(sensor_pm_2_5_in).state);
+            std::string v2 = std::to_string((int)id(sensor_pm_10_0_in).state);
+            ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_cigarette), font_small, v1.c_str());
+            ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_wind),   font_small, v2.c_str());
+            it.printf(x2 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "2.5");
+            it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "10");
+          } else {
+            ui::draw_auto_header_wrench(it, id(img_manual), id(img_wrench));
+            ui::draw_hints_pair(it, id(img_turn_small), "edit", id(img_push_small), "next", font_small);
+          
+            const int marker_y = ui::Y_ICONS + 1;
+            int focus_idx = ui::focus_index_from_state(id(focus_manual).state.c_str());
+            ui::draw_focus_marker(it, focus_idx, marker_y, id(img_arrow_right));
+            ui::draw_focus_desc_manual(it, font_small, focus_idx);
+          }
+
+          // Right-side icons
+          const int x0 = ui::right_icon_x(0);
+          const int x1 = ui::right_icon_x(1);
+          
+          const int bright = id(cfg_brightness_manual).state;
+          const int speed  = id(cfg_fan_manual).state;
+          
+          ui::draw_icon_and_value(it, x0, ui::Y_ICONS, id(img_light_on), font_small, bright);
+          ui::draw_icon_and_value(it, x1, ui::Y_ICONS, id(img_fan_on),   font_small, speed);
+
+      - id: page_off
+        lambda: |-
+          auto font_big = id(f10_lucidasans_bold);
+          ui::draw_mode_header(it, font_big, "OFF", id(img_off));
+
+      - id: page_qr_code
+        lambda: |-
+          auto font_big = id(f10_lucidasans_bold);
+          ui::draw_mode_header(it, font_big, "QR code", id(img_turn));
+
+      - id: page_provision
+        lambda: |-
+          auto font_big = id(f10_lucidasans_bold);
+          ui::draw_mode_header(it, font_big, "PROVISION");

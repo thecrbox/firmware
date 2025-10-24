@@ -1,0 +1,132 @@
+packages:
+  - !include _sensor_internal.yaml
+
+sensor:
+  - platform: sen5x
+    id: sen55
+    i2c_id: ${SENSOR_SENSIRON_BUS_ID}
+    pm_1_0:
+      name: ${SENSOR_NAME_PM_1_0}
+      id: sensor_pm_1_0
+      device_id: device_sensor
+      accuracy_decimals: 1
+      web_server:
+        sorting_group_id: sorting_group_sensor
+      filters:
+        - throttle_average: 10s
+        - heartbeat: 10s
+        - filter_out: nan
+        - skip_initial: 3
+      on_raw_value:
+        then:
+          - lambda: id(sensor_pm_1_0_in).publish_state(x);
+    pm_2_5:
+      name: ${SENSOR_NAME_PM_2_5}
+      id: sensor_pm_2_5
+      device_id: device_sensor
+      accuracy_decimals: 1
+      web_server:
+        sorting_group_id: sorting_group_sensor
+      filters:
+        - throttle_average: 10s
+        - heartbeat: 10s
+        - filter_out: nan
+        - skip_initial: 3
+      on_raw_value:
+        then:
+          - lambda: id(sensor_pm_2_5_in).publish_state(x);
+    pm_4_0:
+      name: ${SENSOR_NAME_PM_4_0}
+      id: sensor_pm_4_0
+      device_id: device_sensor
+      accuracy_decimals: 1
+      web_server:
+        sorting_group_id: sorting_group_sensor
+      filters:
+        - throttle_average: 10s
+        - heartbeat: 10s
+        - filter_out: nan
+        - skip_initial: 3
+      on_raw_value:
+        then:
+          - lambda: id(sensor_pm_4_0_in).publish_state(x);
+    pm_10_0:
+      name: ${SENSOR_NAME_PM_10_0}
+      id: sensor_pm_10_0
+      device_id: device_sensor
+      accuracy_decimals: 1
+      web_server:
+        sorting_group_id: sorting_group_sensor
+      filters:
+        - throttle_average: 10s
+        - heartbeat: 10s
+        - filter_out: nan
+        - skip_initial: 3
+      on_raw_value:
+        then:
+          - lambda: id(sensor_pm_10_0_in).publish_state(x);
+    temperature:
+      name: ${SENSOR_NAME_TEMPERATURE}
+      id: sensor_temperature
+      device_id: device_sensor
+      accuracy_decimals: 1
+      web_server:
+        sorting_group_id: sorting_group_sensor
+      filters:
+        - throttle_average: 10s
+        - heartbeat: 10s
+        - filter_out: nan
+        - skip_initial: 3
+      on_raw_value:
+        then:
+          - lambda: id(sensor_temperature_in).publish_state(x);
+    humidity:
+      name: ${SENSOR_NAME_HUMIDITY}
+      id: sensor_humidity
+      device_id: device_sensor
+      accuracy_decimals: 0
+      web_server:
+        sorting_group_id: sorting_group_sensor
+      filters:
+        - throttle_average: 10s
+        - heartbeat: 10s
+        - filter_out: nan
+        - skip_initial: 3
+      on_raw_value:
+        then:
+          - lambda: id(sensor_humidity_in).publish_state(x);
+    nox:
+      name: ${SENSOR_NAME_NOX}
+      id: sensor_nox
+      device_id: device_sensor
+      web_server:
+        sorting_group_id: sorting_group_sensor
+      filters:
+        - throttle_average: 10s
+        - heartbeat: 10s
+        - filter_out: nan
+        - skip_initial: 3
+      on_raw_value:
+        then:
+          - lambda: id(sensor_nox_in).publish_state(x);
+    voc:
+      name: ${SENSOR_NAME_VOC}
+      id: sensor_voc
+      device_id: device_sensor
+      web_server:
+        sorting_group_id: sorting_group_sensor
+      filters:
+        - throttle_average: 10s
+        - heartbeat: 10s
+        - filter_out: nan
+        - skip_initial: 3
+      on_raw_value:
+        then:
+          - lambda: id(sensor_voc_in).publish_state(x);
+    temperature_compensation:
+      offset: 0
+      normalized_offset_slope: 0
+      time_constant: 0
+    acceleration_mode: low
+    address: 0x69
+    update_interval: 10s

@@ -1,0 +1,161 @@
+substitutions:
+  SENSOR_NAME_PM_1_0: "Air PM1.0 (ultra-fine particles)"
+  SENSOR_NAME_PM_2_5: "Air PM2.5 (fine particles)"
+  SENSOR_NAME_PM_4_0: "Air PM4.0 (small particles)"
+  SENSOR_NAME_PM_10_0: "Air PM10.0 (dust)"
+  SENSOR_NAME_TEMPERATURE: "Temperature"
+  SENSOR_NAME_HUMIDITY: "Humidity"
+  SENSOR_NAME_VOC: "VOC"
+  SENSOR_NAME_NOX: "NOX"
+  SENSOR_UPDATE_INTERVAL: "0s"
+
+esphome:
+  devices:
+    - id: device_sensor
+      name: "Sensor"
+
+web_server:
+  sorting_groups:
+    - id: sorting_group_sensor
+      name: "Sensor"
+      sorting_weight: 11
+
+# --- PM inlet placeholders (do not rename) ---
+sensor:
+  - platform: template
+    id: sensor_pm_1_0_in
+    internal: true
+    update_interval: never
+
+  - platform: template
+    id: sensor_pm_2_5_in
+    internal: true
+    update_interval: never
+
+  - platform: template
+    id: sensor_pm_4_0_in
+    internal: true
+    update_interval: never
+
+  - platform: template
+    id: sensor_pm_10_0_in
+    internal: true
+    update_interval: never
+  
+  - platform: template
+    id: sensor_voc_in
+    internal: true
+    update_interval: never
+
+  - platform: template
+    id: sensor_nox_in
+    internal: true
+    update_interval: never
+
+  - platform: template
+    id: sensor_temperature_in
+    internal: true
+    update_interval: never
+
+  - platform: template
+    id: sensor_humidity_in
+    internal: true
+    update_interval: never
+
+  - platform: template
+    name: "AQI (combined)"
+    id: sensor_aqi_value
+    unit_of_measurement: "AQI"
+    device_class: aqi
+    icon: mdi:air-filter
+    accuracy_decimals: 1     # keep decimals for the 5.0 “Very Good” cut
+    update_interval: 30s
+    state_class: measurement
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    lambda: |-
+      using std::isnan;
+
+      // Read inlets (may be NAN if not fed by hardware)
+      const float pm1  = id(sensor_pm_1_0_in).state;
+      const float pm25 = id(sensor_pm_2_5_in).state;
+      const float pm4  = id(sensor_pm_4_0_in).state;
+      const float pm10 = id(sensor_pm_10_0_in).state;
+
+      struct BP { float Clow; float Chigh; int Ilow; int Ihigh; };
+
+      // EPA PM2.5 AQI (truncate to 0.1 µg/m³)
+      auto aqi_pm25 = [](float c)->float {
+        float Ct = floorf(c * 10.0f) / 10.0f;
+        const BP bp[] = {
+          {  0.0f,  12.0f,   0,  50},
+          { 12.1f,  35.4f,  51, 100},
+          { 35.5f,  55.4f, 101, 150},
+          { 55.5f, 150.4f, 151, 200},
+          {150.5f, 250.4f, 201, 300},
+          {250.5f, 350.4f, 301, 400},
+          {350.5f, 500.4f, 401, 500},
+        };
+        for (auto &b : bp) if (Ct <= b.Chigh)
+          return (b.Ihigh - b.Ilow) * (Ct - b.Clow) / (b.Chigh - b.Clow) + b.Ilow;
+        return 500.0f;
+      };
+
+      // EPA PM10 AQI (truncate to integer µg/m³)
+      auto aqi_pm10 = [](float c)->float {
+        float Ct = floorf(c);
+        const BP bp[] = {
+          {  0.0f,  54.0f,   0,  50},
+          { 55.0f, 154.0f,  51, 100},
+          {155.0f, 254.0f, 101, 150},
+          {255.0f, 354.0f, 151, 200},
+          {355.0f, 424.0f, 201, 300},
+          {425.0f, 504.0f, 301, 400},
+          {505.0f, 604.0f, 401, 500},
+        };
+        for (auto &b : bp) if (Ct <= b.Chigh)
+          return (b.Ihigh - b.Ilow) * (Ct - b.Clow) / (b.Chigh - b.Clow) + b.Ilow;
+        return 500.0f;
+      };
+
+      // Compute AQIs only for available inputs
+      float combined = -1.0f;
+
+      if (!isnan(pm1))  { float v = aqi_pm25(pm1);  if (v > combined) combined = v; }   // PM1.0 → PM2.5 curve
+      if (!isnan(pm25)) { float v = aqi_pm25(pm25); if (v > combined) combined = v; }
+      if (!isnan(pm4))  { float v = aqi_pm10(pm4);  if (v > combined) combined = v; }   // PM4.0 → PM10 curve
+      if (!isnan(pm10)) { float v = aqi_pm10(pm10); if (v > combined) combined = v; }
+
+      if (combined < 0.0f) return NAN;   // no inputs available yet
+
+      // Clamp to 0…500
+      if (combined < 0.0f) combined = 0.0f;
+      if (combined > 500.0f) combined = 500.0f;
+
+      return combined;
+
+    filters:
+      - sliding_window_moving_average:
+          window_size: 10
+          send_every: 1
+
+text_sensor:
+  - platform: template
+    id: sensor_aqi_category
+    name: "AQI Category"
+    icon: mdi:information
+    update_interval: 30s
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    lambda: |-
+      float aqi = id(sensor_aqi_value).state;
+      if (isnan(aqi))      return {"?"};
+      if (aqi <= 5.0f)     return {"Great"};
+      if (aqi <= 50.0f)    return {"Good"};
+      if (aqi <= 100.0f)   return {"Moderate"};
+      if (aqi <= 150.0f)   return {"Bad"};
+      if (aqi <= 200.0f)   return {"Unhealthy"};
+      if (aqi <= 300.0f)   return {"Extreme"};
+      return {"Hazardous"};

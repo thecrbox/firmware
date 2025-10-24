@@ -1,0 +1,45 @@
+esphome:
+  name: box2-0003
+  friendly_name: box2-0003
+  min_version: 2025.5.0
+  name_add_mac_suffix: false
+
+  includes:
+    - src/purifier_pid.h
+
+external_components:
+  - source:
+      type: local
+      path: src/components
+
+packages:
+  - !include src/board.yaml
+  - !include src/network.yaml
+  - !include src/purifier.yaml
+  - !include src/ui_common.yaml
+  - !include src/ui_display_and_encoder.yaml
+
+  # for now only one RGB mo at a time is supported, choose:
+  #- !include thebox2/ui_rgb_fans.yaml
+  - !include src/ui_rgb_strips.yaml
+
+  # for now only one environmental sensor at a time is supported, choose:
+  #- !include thebox/sensor_pmsx0003.yaml
+  #- !include thebox/sensor_fake.yaml
+  - !include src/sensor_sen5x.yaml
+
+
+
+logger:
+  level: INFO
+  baud_rate: 0
+
+preferences:
+  # TODO: consider increasing further after we're done with development
+  flash_write_interval: 1min
+
+substitutions:
+  # depending on the display version, we may want to override that
+  UI_DISPLAY_TYPE: "SH1106 128x64"
+  #UI_DISPLAY_TYPE: "SSD1305 128x64"
+  #UI_DISPLAY_TYPE: "SSD1306 128x64"

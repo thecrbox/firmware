@@ -254,9 +254,9 @@ script:
                 if (id(ui_mode_select).state == "AUTO") {
                   if (id(focus_auto_config).state == "idle") {
                     if (dir > 0) {
-                      select_next(id(focus_auto_quality));
+                      select_next(id(focus_sensors));
                     } else {
-                      select_previous(id(focus_auto_quality));
+                      select_previous(id(focus_sensors));
                     }
                   } else if (id(focus_auto_config).state == "config_auto_preview") {
                     id(focus_auto_config).make_call().set_option("idle").perform();
@@ -283,9 +283,9 @@ script:
                 } else if (id(ui_mode_select).state == "MANUAL") {
                   if (id(focus_manual).state == "idle") {
                     if (dir > 0) {
-                      select_next(id(focus_auto_quality));
+                      select_next(id(focus_sensors));
                     } else {
-                      select_previous(id(focus_auto_quality));
+                      select_previous(id(focus_sensors));
                     }
                   } else if (id(focus_manual).state == "config_manual_fan") {
                     id(cfg_fan_manual).make_call()
@@ -440,7 +440,7 @@ select:
       - "config_auto_night_rgb"
   - platform: template
     name: "UI: Focus QUALITY"
-    id: focus_auto_quality
+    id: focus_sensors
     device_id: device_interface
     optimistic: true
     internal: true
@@ -457,6 +457,7 @@ select:
       - "nox"
 #      - "voc"
       - "temp_and_humidity"
+      - "qr"
   - platform: template
     name: "UI: Focus MANUAL"
     id: focus_manual
@@ -700,14 +701,14 @@ display:
           ui::draw_icon_and_value(it, x0, ui::Y_ICONS, id(img_light_on), font_small, bright);
           ui::draw_icon_and_value(it, x1, ui::Y_ICONS, id(img_fan_on),   font_small, speed);
           
-          if (id(focus_auto_quality).state == "aqi") {
+          if (id(focus_sensors).state == "aqi") {
             std::string title = "AQI: " + id(sensor_aqi_category).state;
             ui::draw_gauge_title_left(it, ui::X_OFFSET_ICONS, ui::ICON,
                                         ui::X_OFFSET_ICONS, ui::X_OFFSET_ICONS - ui::BAR_H,
                                         id(sensor_aqi_value).state, 500,
                                         title.c_str(),
                                         font_value, font_value);
-          } else if (id(focus_auto_quality).state == "aqi2") {
+          } else if (id(focus_sensors).state == "aqi2") {
             it.printf(0, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "AQI");
             std::string title = id(sensor_aqi_category).state;
             ui::draw_gauge_title_center(it, ui::X_OFFSET_ICONS, ui::ICON,
@@ -715,21 +716,21 @@ display:
                                         id(sensor_aqi_value).state, 500,
                                         title.c_str(),
                                         font_value, font_value);
-          } else if (id(focus_auto_quality).state == "aqi3") {
+          } else if (id(focus_sensors).state == "aqi3") {
             std::string title = "AQI:" + id(sensor_aqi_category).state;
             ui::draw_gauge_title_left(it, ui::BAR_W, ui::ICON,
                                         ui::BAR_W, ui::BAR_W - ui::BAR_H,
                                         id(sensor_aqi_value).state, 500,
                                         title.c_str(),
                                         font_small, font_small);
-          } else if (id(focus_auto_quality).state == "aqi4") {
+          } else if (id(focus_sensors).state == "aqi4") {
             std::string title = id(sensor_aqi_category).state;
             ui::draw_gauge_title_center(it, ui::BAR_W, ui::ICON,
                                         ui::BAR_W, ui::BAR_W - ui::BAR_H,
                                         id(sensor_aqi_value).state, 500,
                                         title.c_str(),
                                         font_small, font_small);
-          } else if (id(focus_auto_quality).state == "temp_and_humidity") {
+          } else if (id(focus_sensors).state == "temp_and_humidity") {
             // icons
             const int x2 = ui::right_icon_x(2);
             const int x3 = ui::right_icon_x(3);
@@ -742,7 +743,7 @@ display:
             // title
             std::string title = "AQI: " + id(sensor_aqi_category).state;
             it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
-          } else if (id(focus_auto_quality).state == "pm_2_5") {
+          } else if (id(focus_sensors).state == "pm_2_5") {
             // icons
             const int x2 = ui::right_icon_x(2);
             const int x3 = ui::right_icon_x(3);
@@ -755,7 +756,7 @@ display:
             // title
             std::string title = "AQI: " + id(sensor_aqi_category).state;
             it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
-          } else if (id(focus_auto_quality).state == "nox") {
+          } else if (id(focus_sensors).state == "nox") {
             // icons
             const int x2 = ui::right_icon_x(2);
             const int x3 = ui::right_icon_x(3);
@@ -768,6 +769,23 @@ display:
             // title
             std::string title = "AQI: " + id(sensor_aqi_category).state;
             it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
+          } else if (id(focus_sensors).state == "qr") {
+                      std::string http_url;
+            if (esphome::wifi::global_wifi_component != nullptr) {
+                auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
+                for (auto &ip : addresses) {
+                    if (ip.is_set() && ip.is_ip4()) {
+                        http_url = "http://" + ip.str();
+                        break;
+                    }
+                }
+            }
+  
+            if (!http_url.empty()) {
+                ui::draw_qr_code(it, id(device_ip_qr_code), http_url, true);
+            } else {
+                it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "no Wi-Fi");
+            }
           } else {
             const int x3 = ui::right_icon_x(3);
             ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_wind),   font_small, "xxx");
@@ -852,14 +870,14 @@ display:
           auto font_tiny  = id(f06_u8g2_squeezed);
           if (id(focus_manual).state == "idle") {
             ui::draw_mode_header(it, font_big, "MANUAL", id(img_manual));
-            if (id(focus_auto_quality).state == "aqi") {
+            if (id(focus_sensors).state == "aqi") {
               std::string title = "AQI: " + id(sensor_aqi_category).state;
               ui::draw_gauge_title_left(it, ui::X_OFFSET_ICONS, ui::ICON,
                                           ui::X_OFFSET_ICONS, ui::X_OFFSET_ICONS - ui::BAR_H,
                                           id(sensor_aqi_value).state, 500,
                                           title.c_str(),
                                           font_value, font_value);
-            } else if (id(focus_auto_quality).state == "aqi2") {
+            } else if (id(focus_sensors).state == "aqi2") {
               it.printf(0, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "AQI");
               std::string title = id(sensor_aqi_category).state;
               ui::draw_gauge_title_center(it, ui::X_OFFSET_ICONS, ui::ICON,
@@ -867,21 +885,21 @@ display:
                                           id(sensor_aqi_value).state, 500,
                                           title.c_str(),
                                           font_value, font_value);
-            } else if (id(focus_auto_quality).state == "aqi3") {
+            } else if (id(focus_sensors).state == "aqi3") {
               std::string title = "AQI:" + id(sensor_aqi_category).state;
               ui::draw_gauge_title_left(it, ui::BAR_W, ui::ICON,
                                           ui::BAR_W, ui::BAR_W - ui::BAR_H,
                                           id(sensor_aqi_value).state, 500,
                                           title.c_str(),
                                           font_small, font_small);
-            } else if (id(focus_auto_quality).state == "aqi4") {
+            } else if (id(focus_sensors).state == "aqi4") {
               std::string title = id(sensor_aqi_category).state;
               ui::draw_gauge_title_center(it, ui::BAR_W, ui::ICON,
                                           ui::BAR_W, ui::BAR_W - ui::BAR_H,
                                           id(sensor_aqi_value).state, 500,
                                           title.c_str(),
                                           font_small, font_small);
-            } else if (id(focus_auto_quality).state == "temp_and_humidity") {
+            } else if (id(focus_sensors).state == "temp_and_humidity") {
               const int x2 = ui::right_icon_x(2);
               const int x3 = ui::right_icon_x(3);
               std::string v1 = ui::format_sensor_value(id(sensor_temperature_in).state, 0, "°C");
@@ -892,7 +910,7 @@ display:
               it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "hum");
               std::string title = "AQI: " + id(sensor_aqi_category).state;
               it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
-            } else if (id(focus_auto_quality).state == "pm_2_5") {
+            } else if (id(focus_sensors).state == "pm_2_5") {
               const int x2 = ui::right_icon_x(2);
               const int x3 = ui::right_icon_x(3);
               std::string v1 = ui::format_sensor_value(id(sensor_pm_2_5_in).state);
@@ -903,7 +921,7 @@ display:
               it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "10");
               std::string title = "AQI: " + id(sensor_aqi_category).state;
               it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
-            } else if (id(focus_auto_quality).state == "nox") {
+            } else if (id(focus_sensors).state == "nox") {
               const int x2 = ui::right_icon_x(2);
               const int x3 = ui::right_icon_x(3);
               std::string v1 = ui::format_sensor_value(id(sensor_nox_in).state);
@@ -918,6 +936,23 @@ display:
               const int x3 = ui::right_icon_x(3);
               ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_wind),   font_small, "xxx");
               it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "UNIMPLEMENTED");
+            }
+          } else if (id(focus_sensors).state == "qr") {
+                      std::string http_url;
+            if (esphome::wifi::global_wifi_component != nullptr) {
+                auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
+                for (auto &ip : addresses) {
+                    if (ip.is_set() && ip.is_ip4()) {
+                        http_url = "http://" + ip.str();
+                        break;
+                    }
+                }
+            }
+          
+            if (!http_url.empty()) {
+                ui::draw_qr_code(it, id(device_ip_qr_code), http_url, true);
+            } else {
+                it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "no Wi-Fi");
             }
           } else {
             ui::draw_auto_header_wrench(it, id(img_manual), id(img_wrench));

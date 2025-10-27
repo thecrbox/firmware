@@ -270,18 +270,6 @@ namespace ui {
         draw_hint(it, HINT_X_RIGHT, img_right, font, lbl_right);
     }
 
-// Centered printf between two x positions (for "X clicks to edit")
-    template <typename... Args>
-    inline void printf_center_between(esphome::display::Display &it,
-                                      int x_left, int x_right, int y,
-                                      BaseFont *font,
-                                      const char *fmt, Args... args) {
-        using esphome::display::COLOR_ON;
-        using esphome::display::TextAlign;
-        const int cx = x_left + (x_right - x_left) / 2;
-        it.printf(cx, y, font, COLOR_ON, TextAlign::TOP_CENTER, fmt, args...);
-    }
-
 // ================== Focus marker + description ==================
     inline void draw_focus_marker(esphome::display::Display &it,
                                   int focus_index_from_right,  // 0=RGB, 1=fan, 2=time

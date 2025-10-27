@@ -362,13 +362,22 @@ namespace ui {
 
     inline void draw_qr_code(esphome::display::Display &it,
                             esphome::qr_code::QrCode *qr_code_component,
-                            std::string val = "") {
+                            const std::string &val = "") {
         using esphome::display::COLOR_ON;
 
+        if (qr_code_component == nullptr) {
+            return;
+        }
+
+        if (!val.empty()) {
+            qr_code_component->set_value(val);
+        }
+
         constexpr int scale = 2;
-        auto size = id(qr_code_component).get_size() * scale; // Multiply by scale
-        auto x = (it.get_width()) - size;
-        auto y = (it.get_height() / 2) - (size / scale);
+        const int module_size = static_cast<int>(qr_code_component->get_size());
+        const int size = module_size * scale;
+        const int x = it.get_width() - size;
+        const int y = (it.get_height() - size);
 
         it.qr_code(x, y, qr_code_component, COLOR_ON, scale);
     }

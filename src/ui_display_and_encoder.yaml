@@ -564,6 +564,9 @@ qr_code:
     value: "WIFI:T:none;S:${device_name};"
     #value: "foo"
     ecc: LOW
+  - id: device_ip_qr_code
+    value: ""
+    ecc: LOW
 
 image:
   - file: "./images/push_small.png"
@@ -940,14 +943,20 @@ display:
           auto font_tiny = id(f06_u8g2_squeezed);
           ui::draw_mode_header(it, font_big, "OFF", id(img_off));
 
+          std::string http_url;
           if (esphome::wifi::global_wifi_component != nullptr) {
               auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
               for (auto &ip : addresses) {
                   if (ip.is_set() && ip.is_ip4()) {
-                      it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "http://%s", ip.str().c_str());
+                      http_url = "http://" + ip.str();
+                      it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", http_url.c_str());
                       break;
                   }
               }
+          }
+
+          if (!http_url.empty()) {
+              ui::draw_qr_code(it, id(device_ip_qr_code), http_url);
           }
 
       - id: page_init
@@ -972,7 +981,7 @@ display:
             info_y += 12;
             it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "and visit");
             info_y += 8;
-            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "192.168.4.1");
+            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "http://192.168.4.1");
             info_y += 12;
             info_y += 5;
   

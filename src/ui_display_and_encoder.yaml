@@ -35,6 +35,22 @@ globals:
     type: bool
     restore_value: false
     initial_value: 'false'
+  - id: ui_setup_step_state
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: ui_setup_step_cycle_count
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: ui_setup_step_last_change_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: ui_setup_step_interactive
+    type: bool
+    restore_value: false
+    initial_value: 'false'
 
 interval:
 #  - interval: 10s
@@ -129,9 +145,18 @@ script:
           condition:
             lambda: 'return id(ui_inputs_locked);'
           then:
-            - logger.log:
-                level: INFO
-                format: "UI: ui_on_click; ignoring while inputs locked"
+            - lambda: |-
+                if (id(network_hotspot_active)) {
+                  if (id(ui_setup_step_interactive)) {
+                    id(ui_setup_step_state) = (id(ui_setup_step_state) == 0) ? 1 : 0;
+                    id(ui_setup_step_last_change_ms) = esphome::millis();
+                    ESP_LOGI("UI", "ui_on_click; provisioning toggled step -> %d", id(ui_setup_step_state));
+                  } else {
+                    ESP_LOGI("UI", "ui_on_click; provisioning intro active, ignoring click");
+                  }
+                } else {
+                  ESP_LOGI("UI", "ui_on_click; ignoring while inputs locked");
+                }
           else:
             - logger.log:
                 level: INFO
@@ -208,6 +233,10 @@ script:
           format: "UI: ui_force_setup_mode; forcing provisioning mode"
       - lambda: |-
           id(ui_inputs_locked) = true;
+          id(ui_setup_step_state) = 0;
+          id(ui_setup_step_cycle_count) = 0;
+          id(ui_setup_step_interactive) = false;
+          id(ui_setup_step_last_change_ms) = esphome::millis();
           id(page_init).show();
 
   - id: ui_force_post_provision
@@ -229,9 +258,25 @@ script:
           condition:
             lambda: 'return id(ui_inputs_locked);'
           then:
-            - logger.log:
-                level: INFO
-                format: "UI: ui_on_rotate; ignoring while inputs locked"
+            - lambda: |-
+                if (id(network_hotspot_active) && id(ui_setup_step_interactive)) {
+                  int next_state = id(ui_setup_step_state);
+                  if (dir > 0 && next_state != 1) {
+                    next_state = 1;
+                  } else if (dir < 0 && next_state != 0) {
+                    next_state = 0;
+                  }
+
+                  if (next_state != id(ui_setup_step_state)) {
+                    id(ui_setup_step_state) = next_state;
+                    id(ui_setup_step_last_change_ms) = esphome::millis();
+                    ESP_LOGI("UI", "ui_on_rotate; provisioning step -> %d (dir=%d)", id(ui_setup_step_state), dir);
+                  } else {
+                    ESP_LOGI("UI", "ui_on_rotate; provisioning step unchanged (dir=%d)", dir);
+                  }
+                } else {
+                  ESP_LOGI("UI", "ui_on_rotate; ignoring while inputs locked");
+                }
           else:
             - logger.log:
                 level: INFO
@@ -969,8 +1014,32 @@ display:
           auto font_tiny = id(f06_u8g2_squeezed);
 
           if (id(network_hotspot_active)) {
-            static constexpr uint32_t STEP_INTERVAL_MS = 7000U;
-            const bool show_step2 = ((esphome::millis() / STEP_INTERVAL_MS) % 2U) == 1U;
+            static constexpr uint32_t STEP_DELAY_MS = 2000U;
+            const uint32_t now = esphome::millis();
+
+            if (id(ui_setup_step_last_change_ms) == 0U) {
+              id(ui_setup_step_last_change_ms) = now;
+              id(ui_setup_step_state) = 0;
+              id(ui_setup_step_cycle_count) = 0;
+              id(ui_setup_step_interactive) = false;
+            }
+
+            if (!id(ui_setup_step_interactive)) {
+              if (now - id(ui_setup_step_last_change_ms) >= STEP_DELAY_MS) {
+                id(ui_setup_step_last_change_ms) = now;
+                if (id(ui_setup_step_state) == 0) {
+                  id(ui_setup_step_state) = 1;
+                } else {
+                  id(ui_setup_step_state) = 0;
+                  id(ui_setup_step_cycle_count) += 1;
+                  if (id(ui_setup_step_cycle_count) >= 2) {
+                    id(ui_setup_step_interactive) = true;
+                  }
+                }
+              }
+            }
+
+            const bool show_step2 = (id(ui_setup_step_state) == 1);
 
             const char *setup_ssid = "${device_setup_ssid}";
             const char *captive_portal_url = "http://192.168.4.1";
@@ -978,7 +1047,7 @@ display:
             int info_y = ui::Y_OFFSET_ICON_SUB_ROW1;
 
             if (show_step2) {
-              ui::draw_mode_header_no_wifi(it, font_big, "STEP 2/2", id(img_turn));
+              ui::draw_mode_header_no_wifi(it, font_big, "STEP 2", id(img_turn));
 
               it.printf(text_x, info_y, font_small, COLOR_ON, TextAlign::TOP_LEFT, "Open portal");
               info_y += 15;
@@ -990,7 +1059,7 @@ display:
 
               ui::draw_qr_code(it, id(device_ip_qr_code), captive_portal_url);
             } else {
-              ui::draw_mode_header_no_wifi(it, font_big, "STEP 1/2", id(img_turn));
+              ui::draw_mode_header_no_wifi(it, font_big, "STEP 1", id(img_turn));
 
               it.printf(text_x, info_y, font_small, COLOR_ON, TextAlign::TOP_LEFT, "Join hotspot");
               info_y += 15;
@@ -1000,9 +1069,18 @@ display:
 
               ui::draw_qr_code(it, id(provisioning_qr_code));
             }
+
+            if (id(ui_setup_step_interactive)) {
+              const char *hint_label = show_step2 ? "prev" : "next";
+              ui::draw_hint(it, ui::HINT_X_RIGHT + 9, id(img_turn_small), font_small, hint_label);
+            }
           } else {
+            id(ui_setup_step_last_change_ms) = 0;
+            id(ui_setup_step_cycle_count) = 0;
+            id(ui_setup_step_interactive) = false;
+            id(ui_setup_step_state) = 0;
             ui::draw_mode_header(it, font_big, "CONNECTED", id(img_turn));
-            
+
             const int text_x = 0;
             int info_y = ui::Y_OFFSET_ICON_SUB_ROW1;
             it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "will restart soon...");

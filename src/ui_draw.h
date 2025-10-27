@@ -33,7 +33,6 @@ namespace ui {
     inline constexpr int X_OFFSET_ICONS         = 32; // px between right-aligned icon centers
     inline constexpr int Y_ICONS                = ICON+PADDING; // icon row y
 
-// Hint header constants (match your prior layout)
     inline constexpr int HINT_IMG_Y   = 4;   // hint icon y
     inline constexpr int HINT_TEXT_Y  = 1;   // hint text y
     inline constexpr int HINT_TEXT_DX = 10;  // label x-offset from icon
@@ -41,7 +40,7 @@ namespace ui {
     inline constexpr int HINT_X_LEFT  = 40;  // first hint x
     inline constexpr int HINT_X_RIGHT = 84;  // second hint x
 
-// Where to print the “focused item description”
+// Where to print the "focused item description"
     inline constexpr int DESC_X       = 0;
     inline constexpr int DESC_Y       = Y_ICONS + Y_OFFSET_ICON_SUB_ROW2; // ~50
 
@@ -304,6 +303,19 @@ namespace ui {
         using esphome::display::TextAlign;
         it.image(x, HINT_IMG_Y, img, ImageAlign::TOP_LEFT, COLOR_ON);
         it.printf(x + HINT_TEXT_DX, HINT_TEXT_Y, font, COLOR_ON, TextAlign::TOP_LEFT, "%s", label);
+    }
+
+    inline void draw_hint_right_aligned(esphome::display::Display &it,
+                                        esphome::display::BaseImage *img,
+                                        BaseFont *font,
+                                        const char *label) {
+        using esphome::display::COLOR_ON;
+        using esphome::display::ImageAlign;
+        using esphome::display::TextAlign;
+        const int icon_x = W - ICON;
+        it.image(icon_x, HINT_IMG_Y, img, ImageAlign::TOP_LEFT, COLOR_ON);
+        const int text_x = icon_x - PADDING;
+        it.printf(text_x, HINT_TEXT_Y, font, COLOR_ON, TextAlign::TOP_RIGHT, "%s", label);
     }
 
     inline void draw_hints_pair(esphome::display::Display &it,

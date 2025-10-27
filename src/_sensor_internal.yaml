@@ -82,7 +82,7 @@ sensor:
     unit_of_measurement: "AQI"
     device_class: aqi
     icon: mdi:air-filter
-    accuracy_decimals: 1     # keep decimals for the 5.0 “Very Good” cut
+    accuracy_decimals: 1     # keep decimals for the "Great" cut
     update_interval: never
     state_class: measurement
     device_id: device_sensor
@@ -161,7 +161,7 @@ text_sensor:
     lambda: |-
       float aqi = id(sensor_aqi_value).state;
       if (isnan(aqi))      return {"?"};
-      if (aqi <= 5.0f)     return {"Great"};
+      if (aqi <= 10.0f)    return {"Great"};
       if (aqi <= 50.0f)    return {"Good"};
       if (aqi <= 100.0f)   return {"Moderate"};
       if (aqi <= 150.0f)   return {"Bad"};

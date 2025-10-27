@@ -13,6 +13,20 @@ esphome:
   devices:
     - id: device_sensor
       name: "Sensor"
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          const float no_data = NAN;
+          id(sensor_pm_1_0_in).publish_state(no_data);
+          id(sensor_pm_2_5_in).publish_state(no_data);
+          id(sensor_pm_4_0_in).publish_state(no_data);
+          id(sensor_pm_10_0_in).publish_state(no_data);
+          id(sensor_voc_in).publish_state(no_data);
+          id(sensor_nox_in).publish_state(no_data);
+          id(sensor_temperature_in).publish_state(no_data);
+          id(sensor_humidity_in).publish_state(no_data);
+      - script.execute: update_air_quality_outputs
 
 web_server:
   sorting_groups:
@@ -69,7 +83,7 @@ sensor:
     device_class: aqi
     icon: mdi:air-filter
     accuracy_decimals: 1     # keep decimals for the 5.0 “Very Good” cut
-    update_interval: 30s
+    update_interval: never
     state_class: measurement
     device_id: device_sensor
     web_server:
@@ -135,17 +149,12 @@ sensor:
 
       return combined;
 
-    filters:
-      - sliding_window_moving_average:
-          window_size: 10
-          send_every: 1
-
 text_sensor:
   - platform: template
     id: sensor_aqi_category
     name: "AQI Category"
     icon: mdi:information
-    update_interval: 30s
+    update_interval: never
     device_id: device_sensor
     web_server:
       sorting_group_id: sorting_group_sensor
@@ -159,3 +168,11 @@ text_sensor:
       if (aqi <= 200.0f)   return {"Unhealthy"};
       if (aqi <= 300.0f)   return {"Extreme"};
       return {"Hazardous"};
+
+script:
+  - id: update_air_quality_outputs
+    mode: restart
+    then:
+      - lambda: |-
+          id(sensor_aqi_value).update();
+          id(sensor_aqi_category).update();

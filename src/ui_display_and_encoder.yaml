@@ -728,8 +728,8 @@ display:
             // icons
             const int x2 = ui::right_icon_x(2);
             const int x3 = ui::right_icon_x(3);
-            std::string v1 = std::to_string((int)id(sensor_temperature_in).state) + "°C";
-            std::string v2 = std::to_string((int)id(sensor_humidity_in).state) + "%";
+            std::string v1 = ui::format_sensor_value(id(sensor_temperature_in).state, 0, "°C");
+            std::string v2 = ui::format_sensor_value(id(sensor_humidity_in).state, 0, "%");
             ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_thermometer), font_small, v1.c_str());
             ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_droplet),   font_small, v2.c_str());
             it.printf(x2 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "tem");
@@ -741,8 +741,8 @@ display:
             // icons
             const int x2 = ui::right_icon_x(2);
             const int x3 = ui::right_icon_x(3);
-            std::string v1 = std::to_string((int)id(sensor_pm_2_5_in).state);
-            std::string v2 = std::to_string((int)id(sensor_pm_10_0_in).state);
+            std::string v1 = ui::format_sensor_value(id(sensor_pm_2_5_in).state);
+            std::string v2 = ui::format_sensor_value(id(sensor_pm_10_0_in).state);
             ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_cigarette), font_small, v1.c_str());
             ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_wind),   font_small, v2.c_str());
             it.printf(x2 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "2.5");
@@ -754,8 +754,8 @@ display:
             // icons
             const int x2 = ui::right_icon_x(2);
             const int x3 = ui::right_icon_x(3);
-            std::string v1 = std::to_string((int)id(sensor_nox_in).state);
-            std::string v2 = std::to_string((int)id(sensor_voc_in).state);
+            std::string v1 = ui::format_sensor_value(id(sensor_nox_in).state);
+            std::string v2 = ui::format_sensor_value(id(sensor_voc_in).state);
             ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_lungs), font_small, v1.c_str());
             ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_gastube),   font_small, v2.c_str());
             it.printf(x2 - ui::X_OFFSET_ICONS/2-3, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "NOX");
@@ -879,8 +879,8 @@ display:
             } else if (id(focus_auto_quality).state == "temp_and_humidity") {
               const int x2 = ui::right_icon_x(2);
               const int x3 = ui::right_icon_x(3);
-              std::string v1 = std::to_string((int)id(sensor_temperature_in).state) + "°C";
-              std::string v2 = std::to_string((int)id(sensor_humidity_in).state) + "%";
+              std::string v1 = ui::format_sensor_value(id(sensor_temperature_in).state, 0, "°C");
+              std::string v2 = ui::format_sensor_value(id(sensor_humidity_in).state, 0, "%");
               ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_thermometer), font_small, v1.c_str());
               ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_droplet),   font_small, v2.c_str());
               it.printf(x2 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "tem");
@@ -890,8 +890,8 @@ display:
             } else if (id(focus_auto_quality).state == "pm_2_5") {
               const int x2 = ui::right_icon_x(2);
               const int x3 = ui::right_icon_x(3);
-              std::string v1 = std::to_string((int)id(sensor_pm_2_5_in).state);
-              std::string v2 = std::to_string((int)id(sensor_pm_10_0_in).state);
+              std::string v1 = ui::format_sensor_value(id(sensor_pm_2_5_in).state);
+              std::string v2 = ui::format_sensor_value(id(sensor_pm_10_0_in).state);
               ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_cigarette), font_small, v1.c_str());
               ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_wind),   font_small, v2.c_str());
               it.printf(x2 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "2.5");
@@ -901,8 +901,8 @@ display:
             } else if (id(focus_auto_quality).state == "nox") {
               const int x2 = ui::right_icon_x(2);
               const int x3 = ui::right_icon_x(3);
-              std::string v1 = std::to_string((int)id(sensor_nox_in).state);
-              std::string v2 = std::to_string((int)id(sensor_voc_in).state);
+              std::string v1 = ui::format_sensor_value(id(sensor_nox_in).state);
+              std::string v2 = ui::format_sensor_value(id(sensor_voc_in).state);
               ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_lungs), font_small, v1.c_str());
               ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_gastube),   font_small, v2.c_str());
               it.printf(x2 - ui::X_OFFSET_ICONS/2-3, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "NOX");

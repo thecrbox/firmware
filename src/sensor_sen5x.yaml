@@ -20,6 +20,7 @@ sensor:
       on_raw_value:
         then:
           - lambda: id(sensor_pm_1_0_in).publish_state(x);
+          - script.execute: update_air_quality_outputs
     pm_2_5:
       name: ${SENSOR_NAME_PM_2_5}
       id: sensor_pm_2_5
@@ -35,6 +36,7 @@ sensor:
       on_raw_value:
         then:
           - lambda: id(sensor_pm_2_5_in).publish_state(x);
+          - script.execute: update_air_quality_outputs
     pm_4_0:
       name: ${SENSOR_NAME_PM_4_0}
       id: sensor_pm_4_0
@@ -50,6 +52,7 @@ sensor:
       on_raw_value:
         then:
           - lambda: id(sensor_pm_4_0_in).publish_state(x);
+          - script.execute: update_air_quality_outputs
     pm_10_0:
       name: ${SENSOR_NAME_PM_10_0}
       id: sensor_pm_10_0
@@ -65,6 +68,7 @@ sensor:
       on_raw_value:
         then:
           - lambda: id(sensor_pm_10_0_in).publish_state(x);
+          - script.execute: update_air_quality_outputs
     temperature:
       name: ${SENSOR_NAME_TEMPERATURE}
       id: sensor_temperature
@@ -80,6 +84,7 @@ sensor:
       on_raw_value:
         then:
           - lambda: id(sensor_temperature_in).publish_state(x);
+          - script.execute: update_air_quality_outputs
     humidity:
       name: ${SENSOR_NAME_HUMIDITY}
       id: sensor_humidity
@@ -95,6 +100,7 @@ sensor:
       on_raw_value:
         then:
           - lambda: id(sensor_humidity_in).publish_state(x);
+          - script.execute: update_air_quality_outputs
     nox:
       name: ${SENSOR_NAME_NOX}
       id: sensor_nox
@@ -109,6 +115,7 @@ sensor:
       on_raw_value:
         then:
           - lambda: id(sensor_nox_in).publish_state(x);
+          - script.execute: update_air_quality_outputs
     voc:
       name: ${SENSOR_NAME_VOC}
       id: sensor_voc
@@ -123,6 +130,7 @@ sensor:
       on_raw_value:
         then:
           - lambda: id(sensor_voc_in).publish_state(x);
+          - script.execute: update_air_quality_outputs
     temperature_compensation:
       offset: 0
       normalized_offset_slope: 0

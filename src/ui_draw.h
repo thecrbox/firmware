@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <cstdio>
 #include <string>
 #include "esphome/components/display/display_buffer.h"
 #include "esphome/components/image/image.h"
@@ -55,6 +56,25 @@ namespace ui {
     inline int bars_from(float value, float step, int max_bars = 5) {
         int n = static_cast<int>(std::floor(value / step));
         if (n < 0) n = 0; if (n > max_bars) n = max_bars; return n;
+    }
+
+    inline std::string format_sensor_value(float value, int decimals = 0, const char *suffix = "") {
+        if (std::isnan(value)) {
+            return "?";
+        }
+
+        char buffer[32];
+        if (decimals <= 0) {
+            std::snprintf(buffer, sizeof(buffer), "%.0f", value);
+        } else {
+            std::snprintf(buffer, sizeof(buffer), "%.*f", decimals, value);
+        }
+
+        std::string result(buffer);
+        if (suffix != nullptr && suffix[0] != '\0') {
+            result += suffix;
+        }
+        return result;
     }
 
     inline void print_time_centered(esphome::display::Display &it, int x, int y,
@@ -181,7 +201,7 @@ namespace ui {
     inline void draw_gauge_title_center(esphome::display::Display &it,
                             int cx, int ty,
                             int rout, int rin,
-                            int value,
+                            float value,
                             int max,
                             const char *title,
                             BaseFont *font_title,
@@ -190,15 +210,27 @@ namespace ui {
         using esphome::display::ImageAlign;
         using esphome::display::TextAlign;
 
-        it.filled_gauge(cx, ty + rout, rin, rout, value*100/max);
-        it.printf(cx, ty + rout, font_title, COLOR_ON, TextAlign::BOTTOM_CENTER, "%d", value);
+        const bool has_value = !std::isnan(value);
+        float clamped = has_value ? std::min(std::max(value, 0.0f), static_cast<float>(max)) : 0.0f;
+        int progress = has_value ? static_cast<int>(std::round(clamped * 100.0f / max)) : 0;
+        if (progress < 0) progress = 0;
+        if (progress > 100) progress = 100;
+
+        it.filled_gauge(cx, ty + rout, rin, rout, progress);
+
+        if (has_value) {
+            it.printf(cx, ty + rout, font_title, COLOR_ON, TextAlign::BOTTOM_CENTER, "%d", static_cast<int>(std::round(clamped)));
+        } else {
+            it.printf(cx, ty + rout, font_title, COLOR_ON, TextAlign::BOTTOM_CENTER, "?");
+        }
+
         it.printf(cx, ty + rout + PADDING, font_title, COLOR_ON, TextAlign::TOP_CENTER, title);
     }
 
     inline void draw_gauge_title_left(esphome::display::Display &it,
                                         int cx, int ty,
                                         int rout, int rin,
-                                        int value,
+                                        float value,
                                         int max,
                                         const char *title,
                                         BaseFont *font_title,
@@ -207,8 +239,20 @@ namespace ui {
         using esphome::display::ImageAlign;
         using esphome::display::TextAlign;
 
-        it.filled_gauge(cx, ty + rout, rin, rout, value*100/max);
-        it.printf(cx, ty + rout, font_title, COLOR_ON, TextAlign::BOTTOM_CENTER, "%d", value);
+        const bool has_value = !std::isnan(value);
+        float clamped = has_value ? std::min(std::max(value, 0.0f), static_cast<float>(max)) : 0.0f;
+        int progress = has_value ? static_cast<int>(std::round(clamped * 100.0f / max)) : 0;
+        if (progress < 0) progress = 0;
+        if (progress > 100) progress = 100;
+
+        it.filled_gauge(cx, ty + rout, rin, rout, progress);
+
+        if (has_value) {
+            it.printf(cx, ty + rout, font_title, COLOR_ON, TextAlign::BOTTOM_CENTER, "%d", static_cast<int>(std::round(clamped)));
+        } else {
+            it.printf(cx, ty + rout, font_title, COLOR_ON, TextAlign::BOTTOM_CENTER, "?");
+        }
+
         it.printf(cx - rout, ty + rout + PADDING, font_title, COLOR_ON, TextAlign::TOP_LEFT, title);
     }
 

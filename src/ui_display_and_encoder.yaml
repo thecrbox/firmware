@@ -969,23 +969,37 @@ display:
           auto font_tiny = id(f06_u8g2_squeezed);
 
           if (id(network_hotspot_active)) {
-            ui::draw_mode_header_no_wifi(it, font_big, "INIT", id(img_turn));
-          
+            static constexpr uint32_t STEP_INTERVAL_MS = 7000U;
+            const bool show_step2 = ((esphome::millis() / STEP_INTERVAL_MS) % 2U) == 1U;
+
             const char *setup_ssid = "${device_setup_ssid}";
+            const char *captive_portal_url = "http://192.168.4.1";
             const int text_x = 0;
             int info_y = ui::Y_OFFSET_ICON_SUB_ROW1;
-  
-            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "scan or connect to ");
-            info_y += 8;
-            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "%s", setup_ssid);
-            info_y += 12;
-            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "and visit");
-            info_y += 8;
-            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "http://192.168.4.1");
-            info_y += 12;
-            info_y += 5;
-  
-            ui::draw_qr_code(it, id(provisioning_qr_code));
+
+            if (show_step2) {
+              ui::draw_mode_header_no_wifi(it, font_big, "STEP 2/2", id(img_turn));
+
+              it.printf(text_x, info_y, font_small, COLOR_ON, TextAlign::TOP_LEFT, "Open portal");
+              info_y += 15;
+              it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "visit");
+              info_y += 9;
+              it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "%s", captive_portal_url);
+              info_y = 64-8;
+              it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "scan QR to open");
+
+              ui::draw_qr_code(it, id(device_ip_qr_code), captive_portal_url);
+            } else {
+              ui::draw_mode_header_no_wifi(it, font_big, "STEP 1/2", id(img_turn));
+
+              it.printf(text_x, info_y, font_small, COLOR_ON, TextAlign::TOP_LEFT, "Join hotspot");
+              info_y += 15;
+              it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "%s", setup_ssid);
+              info_y = 64-8;
+              it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "scan QR to connect");
+
+              ui::draw_qr_code(it, id(provisioning_qr_code));
+            }
           } else {
             ui::draw_mode_header(it, font_big, "CONNECTED", id(img_turn));
             

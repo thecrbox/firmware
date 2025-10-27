@@ -31,20 +31,12 @@ globals:
     type: int
     restore_value: false
     initial_value: '0'
-  - id: ui_post_provisioning_ticks
-    type: int
-    restore_value: false
-    initial_value: '0'
   - id: ui_auto_config_unlock_clicks
     # 0..UI_UNLOCK_CLICKS-1 = unlocking
     # UI_UNLOCK_CLICKS = unlocked
     type: int
     restore_value: false
     initial_value: '0'
-  - id: ui_provisioning_requested
-    type: bool
-    restore_value: false
-    initial_value: 'false'
   - id: ui_inputs_locked
     type: bool
     restore_value: false
@@ -64,17 +56,8 @@ script:
   - id: ui_tick
     then:
       - lambda: |-
-          if (id(network_hotspot_active)) {
-            ESP_LOGD("UI", "ui_tick: ignoring tick while in provisioning hotspot");
-            return;
-          }
-
-          if (id(ui_post_provisioning_ticks) > 0) {
-            id(ui_post_provisioning_ticks) -= 1;
-            if (id(ui_post_provisioning_ticks) <= 0) {
-              id(ui_post_provisioning_ticks) = 0;
-              id(ui_on_post_provisioning_hold_complete).execute();
-            }
+          if (id(ui_inputs_locked)) {
+            ESP_LOGD("UI", "ui_tick: ignoring, inputs locked");
             return;
           }
 
@@ -130,7 +113,12 @@ script:
             fn_idler_manual();
             fn_idler_auto();
           }
-  
+
+  - id: ui_brigthness_normal
+    then:
+      - lambda: |-
+          id(oled).set_contrast(1.0f);
+          id(oled).set_brightness(1.0f);
 
   - id: ui_on_not_idle
     then:
@@ -139,8 +127,7 @@ script:
           id(ui_tick_auto_idle) = 0;
           id(ui_tick_manual_idle) = 0;
           id(ui_tick_screen_dim) = 0;
-          id(oled).set_contrast(1.0f);
-          id(oled).set_brightness(1.0f);
+      - script.execute: ui_brigthness_normal
 
   # short click - toggle focus
   - id: ui_on_click
@@ -198,34 +185,31 @@ script:
                 level: INFO
                 format: "UI: ui_on_long_click; ignoring while inputs locked"
           else:
-            - if:
-                condition:
-#                  - lambda: 'return id(ui_provisioning_requested) != true;'
-                  - lambda: 'return id(network_hotspot_active) != true;'
-                then:
-                  - logger.log:
-                      level: INFO
-                      format: "UI: ui_on_long_click; toggling mode"
-                  - script.execute: ui_on_not_idle
-                  - select.next: ui_mode_select
+            - logger.log:
+                level: INFO
+                format: "UI: ui_on_long_click; toggling mode"
+            - script.execute: ui_on_not_idle
+            - select.next: ui_mode_select
 
   # very long click - force setup mode
   - id: ui_force_setup_mode
     then:
-      - if:
-          condition:
-            lambda: 'return id(ui_inputs_locked);'
-          then:
-            - logger.log:
-                level: INFO
-                format: "UI: ui_force_setup_mode; ignoring while inputs locked"
-          else:
-            - logger.log:
-                level: INFO
-                format: "UI: ui_force_setup_mode; forcing provisioning mode"
-            - lambda: |-
-                // id(ui_provisioning_requested) = true;
-                id(page_init).show();
+      - logger.log:
+          level: INFO
+          format: "UI: ui_force_setup_mode; forcing provisioning mode"
+      - lambda: |-
+          id(ui_inputs_locked) = true;
+          id(page_init).show();
+
+  - id: ui_force_post_provision
+    then:
+      - logger.log:
+          level: INFO
+          format: "UI: starting post-provisioning hold"
+      - script.execute: ui_brigthness_normal
+      - lambda: |-
+          id(ui_inputs_locked) = true;
+          id(page_init).show();
 
   - id: ui_on_rotate
     mode: queued
@@ -345,9 +329,8 @@ script:
   - id: ui_focus_update_auto
     then:
       - lambda: |-
-          if (id(network_hotspot_active)) {
-            ESP_LOGI("UI", "focus auto: provisioning active, forcing setup page");
-            id(page_init).show();
+          if (id(ui_inputs_locked)) {
+            ESP_LOGI("UI", "ui_focus_update_auto: inputs locked, skipping focus update");
             return;
           }
 
@@ -392,30 +375,6 @@ script:
             id(page_off).show();
           }
 
-  - id: ui_start_post_provisioning_hold
-    then:
-      - logger.log:
-          level: INFO
-          format: "UI: starting post-provisioning hold"
-      - lambda: |-
-          id(ui_inputs_locked) = true;
-          id(ui_post_provisioning_ticks) = ${UI_TICKS_POST_PROVISIONING_HOLD};
-          id(oled).set_contrast(1.0f);
-          id(oled).set_brightness(1.0f);
-          id(page_init).show();
-
-  - id: ui_on_post_provisioning_hold_complete
-    then:
-      - logger.log:
-          level: INFO
-          format: "UI: post-provisioning hold complete, resuming mode"
-      - lambda: |-
-          id(ui_inputs_locked) = false;
-      - script.execute: ui_display_mode_page
-      - script.execute: ui_on_not_idle
-
-
-
 select:
   - platform: template
     name: "UI: Interface Mode"
@@ -433,17 +392,13 @@ select:
     on_value:
       then:
         - lambda: |-
-            if (id(network_hotspot_active)) {
-              ESP_LOGI("UI", "ui_mode_select.on_value: ignoring mode change while in provisioning hotspot");
-              return;
-            }
-            ESP_LOGI("UI", "ui_mode_select.on_value, ui_mode_select='%s'; i='%d'", id(ui_mode_select).state.c_str(), i);
             if (!id(ui_inputs_locked)) {
+              ESP_LOGI("UI", "ui_mode_select.on_value, ui_mode_select='%s'; i='%d'", id(ui_mode_select).state.c_str(), i);
               id(ui_display_mode_page).execute();
+              id(purifier_mode).make_call().set_option(id(ui_mode_select).state).perform();
             } else {
               ESP_LOGI("UI", "ui_mode_select.on_value: UI locked, deferring page update");
             }
-            id(purifier_mode).make_call().set_option(id(ui_mode_select).state).perform();
 
   - platform: template
     name: "UI: Focus AUTO config"
@@ -962,6 +917,11 @@ display:
             ui::draw_qr_code(it, id(provisioning_qr_code));
           } else {
             ui::draw_mode_header(it, font_big, "CONNECTED", id(img_turn));
+            
+            const int text_x = 0;
+            int info_y = ui::Y_OFFSET_ICON_SUB_ROW1;
+            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "will restart soon...");
+            info_y += 8;
 
             if (esphome::wifi::global_wifi_component != nullptr) {
               auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();

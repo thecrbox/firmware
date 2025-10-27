@@ -24,14 +24,16 @@ wifi:
 
 captive_portal:
 
-esp32_improv:
-  id: myimprov
-  authorizer: button_encoder
-  on_provisioned:
-    then:
-      - logger.log: "Provisioned via Improv"
-      - delay: 500ms
-      - lambda: 'ESP_LOGI("IMPROV", "Restarting after provisioning"); App.safe_reboot();'
+# this MAY be great, but it causes some random crashes (oom?) when enabled with the rest of the system
+# TODO: can we enable it onlyu when provisioning (network_hotspot_active=true), and disable after?
+#esp32_improv:
+#  id: myimprov
+#  authorizer: button_encoder
+#  on_provisioned:
+#    then:
+#      - logger.log: "Provisioned via Improv"
+#      - delay: 500ms
+#      - lambda: 'ESP_LOGI("IMPROV", "Restarting after provisioning"); App.safe_reboot();'
 
 api:
   encryption:
@@ -99,7 +101,9 @@ script:
             - lambda: |-
                 id(network_hotspot_active) = false;
                 global_preferences->sync();
-            - script.execute: ui_start_post_provisioning_hold
+            - script.execute: ui_force_post_provision
+            - delay: 3000ms
+            - switch.turn_on: device_restart_switch
           else:
             - logger.log:
                 level: INFO

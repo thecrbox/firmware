@@ -4,3 +4,4 @@
 .esphome/
 secrets.yaml
 .idea
+src/components/sh1306_dump/__pycache__/

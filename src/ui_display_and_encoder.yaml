@@ -408,9 +408,9 @@ select:
     internal: true
     restore_value: true
     options:
+      - "OFF"
       - "AUTO"
       - "MANUAL"
-      - "OFF"
     on_value:
       then:
         - lambda: |-

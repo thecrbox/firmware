@@ -45,9 +45,9 @@ select:
     internal: false
     restore_value: true
     options:
+      - "OFF"
       - "AUTO"
       - "MANUAL"
-      - "OFF"
 
 packages:
   - !include _purifier_internal.yaml

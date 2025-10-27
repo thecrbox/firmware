@@ -19,8 +19,6 @@ wifi:
       - script.execute: wifi_on_disconnected
 
 
-  # prevents reboot every 15min when wifi is down
-  # reboot_timeout: 0
 
 captive_portal:
 
@@ -42,8 +40,14 @@ esp32_improv:
       - switch.turn_on: device_restart_switch
 
 api:
+  id: myapi
   encryption:
     key: !secret api_key
+  # home assistant is not needed for everyone, so let's disable by default
+  reboot_timeout: 0s
+
+
+
 
 ota:
   - platform: esphome

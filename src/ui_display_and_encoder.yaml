@@ -671,6 +671,8 @@ display:
           auto font_value  = id(f10_lucidasans_regular);
           auto font_small  = id(f08_lucidasans_regular);
           auto font_tiny  = id(f06_u8g2_squeezed);
+          using esphome::display::COLOR_ON;
+          using esphome::display::TextAlign;
 
           auto t = id(mysntp).now();
           auto td = id(cfg_auto_time_day).state_as_esptime();
@@ -687,7 +689,7 @@ display:
           }
     
           // Header: AUTO + sun/moon
-          ui::draw_mode_header(it, font_big, "AUTO", id(img_auto), day_mode ? id(img_sun) : id(img_moon));
+          ui::draw_mode_header_2icons_title_wifi(it, font_big, "AUTO", id(img_auto), day_mode ? id(img_sun) : id(img_moon));
     
           // Right-side icons
           const int x0 = ui::right_icon_x(0);
@@ -701,92 +703,7 @@ display:
           ui::draw_icon_and_value(it, x0, ui::Y_ICONS, id(img_light_on), font_small, bright);
           ui::draw_icon_and_value(it, x1, ui::Y_ICONS, id(img_fan_on),   font_small, speed);
           
-          if (id(focus_sensors).state == "aqi") {
-            std::string title = "AQI: " + id(sensor_aqi_category).state;
-            ui::draw_gauge_title_left(it, ui::X_OFFSET_ICONS, ui::ICON,
-                                        ui::X_OFFSET_ICONS, ui::X_OFFSET_ICONS - ui::BAR_H,
-                                        id(sensor_aqi_value).state, 500,
-                                        title.c_str(),
-                                        font_value, font_value);
-          } else if (id(focus_sensors).state == "aqi2") {
-            it.printf(0, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "AQI");
-            std::string title = id(sensor_aqi_category).state;
-            ui::draw_gauge_title_center(it, ui::X_OFFSET_ICONS, ui::ICON,
-                                        ui::X_OFFSET_ICONS, ui::X_OFFSET_ICONS - ui::BAR_H,
-                                        id(sensor_aqi_value).state, 500,
-                                        title.c_str(),
-                                        font_value, font_value);
-          } else if (id(focus_sensors).state == "aqi3") {
-            std::string title = "AQI:" + id(sensor_aqi_category).state;
-            ui::draw_gauge_title_left(it, ui::BAR_W, ui::ICON,
-                                        ui::BAR_W, ui::BAR_W - ui::BAR_H,
-                                        id(sensor_aqi_value).state, 500,
-                                        title.c_str(),
-                                        font_small, font_small);
-          } else if (id(focus_sensors).state == "aqi4") {
-            std::string title = id(sensor_aqi_category).state;
-            ui::draw_gauge_title_center(it, ui::BAR_W, ui::ICON,
-                                        ui::BAR_W, ui::BAR_W - ui::BAR_H,
-                                        id(sensor_aqi_value).state, 500,
-                                        title.c_str(),
-                                        font_small, font_small);
-          } else if (id(focus_sensors).state == "temp_and_humidity") {
-            // icons
-            const int x2 = ui::right_icon_x(2);
-            const int x3 = ui::right_icon_x(3);
-            std::string v1 = ui::format_sensor_value(id(sensor_temperature_in).state, 0, "°C");
-            std::string v2 = ui::format_sensor_value(id(sensor_humidity_in).state, 0, "%");
-            ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_thermometer), font_small, v1.c_str());
-            ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_droplet),   font_small, v2.c_str());
-            it.printf(x2 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "tem");
-            it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "hum");
-            // title
-            std::string title = "AQI: " + id(sensor_aqi_category).state;
-            it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
-          } else if (id(focus_sensors).state == "pm_2_5") {
-            // icons
-            const int x2 = ui::right_icon_x(2);
-            const int x3 = ui::right_icon_x(3);
-            std::string v1 = ui::format_sensor_value(id(sensor_pm_2_5_in).state);
-            std::string v2 = ui::format_sensor_value(id(sensor_pm_10_0_in).state);
-            ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_cigarette), font_small, v1.c_str());
-            ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_wind),   font_small, v2.c_str());
-            it.printf(x2 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "2.5");
-            it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "10");
-            // title
-            std::string title = "AQI: " + id(sensor_aqi_category).state;
-            it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
-          } else if (id(focus_sensors).state == "nox") {
-            // icons
-            const int x2 = ui::right_icon_x(2);
-            const int x3 = ui::right_icon_x(3);
-            std::string v1 = ui::format_sensor_value(id(sensor_nox_in).state);
-            std::string v2 = ui::format_sensor_value(id(sensor_voc_in).state);
-            ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_lungs), font_small, v1.c_str());
-            ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_gastube),   font_small, v2.c_str());
-            it.printf(x2 - ui::X_OFFSET_ICONS/2-3, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "NOX");
-            it.printf(x3 - ui::X_OFFSET_ICONS/2-1, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "VOC");
-            // title
-            std::string title = "AQI: " + id(sensor_aqi_category).state;
-            it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
-          } else if (id(focus_sensors).state == "qr") {
-                      std::string http_url;
-            if (esphome::wifi::global_wifi_component != nullptr) {
-                auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
-                for (auto &ip : addresses) {
-                    if (ip.is_set() && ip.is_ip4()) {
-                        http_url = "http://" + ip.str();
-                        break;
-                    }
-                }
-            }
-  
-            if (!http_url.empty()) {
-                ui::draw_qr_code(it, id(device_ip_qr_code), http_url, true);
-            } else {
-                it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "no Wi-Fi");
-            }
-          } else {
+          if (!ui::draw_focus_sensors(it, font_value, font_small, font_tiny)) {
             const int x3 = ui::right_icon_x(3);
             ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_wind),   font_small, "xxx");
             it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "UNIMPLEMENTED");
@@ -797,7 +714,7 @@ display:
           auto font_big   = id(f10_lucidasans_bold);
           auto font_small = id(f08_lucidasans_regular);
 
-          ui::draw_auto_header_wrench(it, id(img_auto), id(img_wrench));
+          ui::draw_header_2icons(it, id(img_auto), id(img_wrench));
           // Unlocked header hints: turn=edit, push=next
           ui::draw_hints_pair(it, id(img_turn_small), "edit", id(img_push_small), "next", font_small);
     
@@ -838,7 +755,7 @@ display:
 
           auto font_small = id(f08_lucidasans_regular);
 
-          ui::draw_auto_header_wrench(it, id(img_auto), id(img_wrench));
+          ui::draw_header_2icons(it, id(img_auto), id(img_wrench));
           ui::draw_hints_pair(it, id(img_turn_small), "back", id(img_push_small), "edit", font_small);
 
           const int x0 = ui::right_icon_x(0);
@@ -868,94 +785,17 @@ display:
           auto font_value  = id(f10_lucidasans_regular);
           auto font_small  = id(f08_lucidasans_regular);
           auto font_tiny  = id(f06_u8g2_squeezed);
+          using esphome::display::COLOR_ON;
+          using esphome::display::TextAlign;
           if (id(focus_manual).state == "idle") {
-            ui::draw_mode_header(it, font_big, "MANUAL", id(img_manual));
-            if (id(focus_sensors).state == "aqi") {
-              std::string title = "AQI: " + id(sensor_aqi_category).state;
-              ui::draw_gauge_title_left(it, ui::X_OFFSET_ICONS, ui::ICON,
-                                          ui::X_OFFSET_ICONS, ui::X_OFFSET_ICONS - ui::BAR_H,
-                                          id(sensor_aqi_value).state, 500,
-                                          title.c_str(),
-                                          font_value, font_value);
-            } else if (id(focus_sensors).state == "aqi2") {
-              it.printf(0, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "AQI");
-              std::string title = id(sensor_aqi_category).state;
-              ui::draw_gauge_title_center(it, ui::X_OFFSET_ICONS, ui::ICON,
-                                          ui::X_OFFSET_ICONS, ui::X_OFFSET_ICONS - ui::BAR_H,
-                                          id(sensor_aqi_value).state, 500,
-                                          title.c_str(),
-                                          font_value, font_value);
-            } else if (id(focus_sensors).state == "aqi3") {
-              std::string title = "AQI:" + id(sensor_aqi_category).state;
-              ui::draw_gauge_title_left(it, ui::BAR_W, ui::ICON,
-                                          ui::BAR_W, ui::BAR_W - ui::BAR_H,
-                                          id(sensor_aqi_value).state, 500,
-                                          title.c_str(),
-                                          font_small, font_small);
-            } else if (id(focus_sensors).state == "aqi4") {
-              std::string title = id(sensor_aqi_category).state;
-              ui::draw_gauge_title_center(it, ui::BAR_W, ui::ICON,
-                                          ui::BAR_W, ui::BAR_W - ui::BAR_H,
-                                          id(sensor_aqi_value).state, 500,
-                                          title.c_str(),
-                                          font_small, font_small);
-            } else if (id(focus_sensors).state == "temp_and_humidity") {
-              const int x2 = ui::right_icon_x(2);
-              const int x3 = ui::right_icon_x(3);
-              std::string v1 = ui::format_sensor_value(id(sensor_temperature_in).state, 0, "°C");
-              std::string v2 = ui::format_sensor_value(id(sensor_humidity_in).state, 0, "%");
-              ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_thermometer), font_small, v1.c_str());
-              ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_droplet),   font_small, v2.c_str());
-              it.printf(x2 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "tem");
-              it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "hum");
-              std::string title = "AQI: " + id(sensor_aqi_category).state;
-              it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
-            } else if (id(focus_sensors).state == "pm_2_5") {
-              const int x2 = ui::right_icon_x(2);
-              const int x3 = ui::right_icon_x(3);
-              std::string v1 = ui::format_sensor_value(id(sensor_pm_2_5_in).state);
-              std::string v2 = ui::format_sensor_value(id(sensor_pm_10_0_in).state);
-              ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_cigarette), font_small, v1.c_str());
-              ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_wind),   font_small, v2.c_str());
-              it.printf(x2 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "2.5");
-              it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "10");
-              std::string title = "AQI: " + id(sensor_aqi_category).state;
-              it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
-            } else if (id(focus_sensors).state == "nox") {
-              const int x2 = ui::right_icon_x(2);
-              const int x3 = ui::right_icon_x(3);
-              std::string v1 = ui::format_sensor_value(id(sensor_nox_in).state);
-              std::string v2 = ui::format_sensor_value(id(sensor_voc_in).state);
-              ui::draw_icon_and_text(it, x2, ui::Y_ICONS, id(img_lungs), font_small, v1.c_str());
-              ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_gastube),   font_small, v2.c_str());
-              it.printf(x2 - ui::X_OFFSET_ICONS/2-3, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "NOX");
-              it.printf(x3 - ui::X_OFFSET_ICONS/2-1, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "VOC");
-              std::string title = "AQI: " + id(sensor_aqi_category).state;
-              it.printf(0, ui::H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, title.c_str());
-            } else {
+            ui::draw_mode_header_2icons_title_wifi(it, font_big, "MANUAL", id(img_manual));
+            if (!ui::draw_focus_sensors(it, font_value, font_small, font_tiny)) {
               const int x3 = ui::right_icon_x(3);
               ui::draw_icon_and_text(it, x3, ui::Y_ICONS, id(img_wind),   font_small, "xxx");
               it.printf(x3 - ui::X_OFFSET_ICONS/2, ui::Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "UNIMPLEMENTED");
             }
-          } else if (id(focus_sensors).state == "qr") {
-                      std::string http_url;
-            if (esphome::wifi::global_wifi_component != nullptr) {
-                auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
-                for (auto &ip : addresses) {
-                    if (ip.is_set() && ip.is_ip4()) {
-                        http_url = "http://" + ip.str();
-                        break;
-                    }
-                }
-            }
-          
-            if (!http_url.empty()) {
-                ui::draw_qr_code(it, id(device_ip_qr_code), http_url, true);
-            } else {
-                it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "no Wi-Fi");
-            }
           } else {
-            ui::draw_auto_header_wrench(it, id(img_manual), id(img_wrench));
+            ui::draw_header_2icons(it, id(img_manual), id(img_wrench));
             ui::draw_hints_pair(it, id(img_turn_small), "edit", id(img_push_small), "next", font_small);
 
             const int marker_y = ui::Y_ICONS + 1;
@@ -978,7 +818,7 @@ display:
         lambda: |-
           auto font_big = id(f10_lucidasans_bold);
           auto font_tiny = id(f06_u8g2_squeezed);
-          ui::draw_mode_header(it, font_big, "OFF", id(img_off));
+          ui::draw_mode_header_2icons_title_wifi(it, font_big, "OFF", id(img_off));
 
           std::string http_url;
           if (esphome::wifi::global_wifi_component != nullptr) {
@@ -993,7 +833,7 @@ display:
           }
 
           if (!http_url.empty()) {
-              ui::draw_qr_code(it, id(device_ip_qr_code), http_url);
+              ui::draw_qr_code(it, id(device_ip_qr_code), http_url, false);
           }
 
       - id: page_init
@@ -1010,7 +850,7 @@ display:
             const int text_x = 0;
             int info_y = ui::Y_OFFSET_ICON_SUB_ROW1;
 
-            ui::draw_mode_header_no_wifi(it, font_big, "HELLO", id(img_turn));
+            ui::draw_mode_header_2icons_title(it, font_big, "HELLO", id(img_turn));
 
             it.printf(text_x, info_y, font_small, COLOR_ON, TextAlign::TOP_LEFT, "Scan to");
             info_y += 15;
@@ -1020,7 +860,7 @@ display:
 
             ui::draw_qr_code(it, id(device_ip_qr_code), instructions_url);
           } else {
-            ui::draw_mode_header(it, font_big, "CONNECTED", id(img_turn));
+            ui::draw_mode_header_2icons_title_wifi(it, font_big, "CONNECTED", id(img_turn));
 
             const int text_x = 0;
             int info_y = ui::Y_OFFSET_ICON_SUB_ROW1;

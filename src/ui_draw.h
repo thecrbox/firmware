@@ -139,7 +139,6 @@ namespace ui {
                                 BaseFont *font,
                                 int value, int value2 = -1) {
         using esphome::display::COLOR_ON;
-        using esphome::display::ImageAlign;
         using esphome::display::TextAlign;
 
         it.image(cx, y, img, ImageAlign::TOP_CENTER, COLOR_ON);
@@ -164,7 +163,6 @@ namespace ui {
                                     BaseFont *font,
                                     const char* text, const char* text2 = nullptr) {
         using esphome::display::COLOR_ON;
-        using esphome::display::ImageAlign;
         using esphome::display::TextAlign;
 
         it.image(cx, y, img, ImageAlign::TOP_CENTER, COLOR_ON);
@@ -183,7 +181,6 @@ namespace ui {
                             BaseFont *font_value,
                             esphome::display::BaseImage *left_icon /*=nullptr*/) {
         using esphome::display::COLOR_ON;
-        using esphome::display::ImageAlign;
         using esphome::display::TextAlign;
 
         int text_x = cx;
@@ -206,7 +203,6 @@ namespace ui {
                             BaseFont *font_title,
                             BaseFont *font_value) {
         using esphome::display::COLOR_ON;
-        using esphome::display::ImageAlign;
         using esphome::display::TextAlign;
 
         const bool has_value = !std::isnan(value);
@@ -235,7 +231,6 @@ namespace ui {
                                         BaseFont *font_title,
                                         BaseFont *font_value) {
         using esphome::display::COLOR_ON;
-        using esphome::display::ImageAlign;
         using esphome::display::TextAlign;
 
         const bool has_value = !std::isnan(value);
@@ -256,34 +251,34 @@ namespace ui {
     }
 
 // ================== Page headers (reusable) ==================
-    inline void draw_auto_header_wrench(esphome::display::Display &it,
-                                        esphome::display::BaseImage *img_auto,
-                                        esphome::display::BaseImage *img_wrench) {
+    inline void draw_header_2icons(esphome::display::Display &it,
+                                        esphome::display::BaseImage *img_left,
+                                        esphome::display::BaseImage *img_right) {
         using esphome::display::COLOR_ON;
-        it.image(0, 0, img_auto,   COLOR_ON);
-        it.image(ICON+PADDING, 0, img_wrench, COLOR_ON);  // 16 + 2 offset
+        it.image(0, 0, img_left,   COLOR_ON);
+        it.image(ICON+PADDING, 0, img_right, COLOR_ON);  // 16 + 2 offset
     }
 
-// Generic mode header for other pages (MANUAL / OFF / QR / PROVISION)
-    inline void draw_mode_header_no_wifi(esphome::display::Display &it,
+    inline void draw_mode_header_2icons_title(esphome::display::Display &it,
                                          BaseFont *font_big,
                                          const char *title,
                                          esphome::display::BaseImage *img_left = nullptr,
                                          esphome::display::BaseImage *img_right = nullptr) {
         using esphome::display::COLOR_ON;
+        it.print(ICON+PADDING, 0, font_big, COLOR_ON, title);  // exact overload: (x,y,font,Color,const char*)
+
         if (img_left)
             it.image(0, 0, img_left, COLOR_ON);
-        it.print(ICON+PADDING, 0, font_big, COLOR_ON, title);  // exact overload: (x,y,font,Color,const char*)
         if (img_right)
             it.image(W - ICON - (ICON+PADDING), 0, img_right, COLOR_ON);
     }
 
-    inline void draw_mode_header(esphome::display::Display &it,
+    inline void draw_mode_header_2icons_title_wifi(esphome::display::Display &it,
                                  BaseFont *font_big,
                                  const char *title,
                                  esphome::display::BaseImage *img_left = nullptr,
                                  esphome::display::BaseImage *img_right = nullptr) {
-        draw_mode_header_no_wifi(it, font_big, title, img_left, img_right);
+        draw_mode_header_2icons_title(it, font_big, title, img_left, img_right);
 
         if (id(mywifi).is_connected()) {
             it.image(W - ICON, 0, &id(img_wifi3), COLOR_ON);
@@ -299,7 +294,6 @@ namespace ui {
                           BaseFont *font,
                           const char *label) {
         using esphome::display::COLOR_ON;
-        using esphome::display::ImageAlign;
         using esphome::display::TextAlign;
         it.image(x, HINT_IMG_Y, img, ImageAlign::TOP_LEFT, COLOR_ON);
         it.printf(x + HINT_TEXT_DX, HINT_TEXT_Y, font, COLOR_ON, TextAlign::TOP_LEFT, "%s", label);
@@ -310,7 +304,6 @@ namespace ui {
                                         BaseFont *font,
                                         const char *label) {
         using esphome::display::COLOR_ON;
-        using esphome::display::ImageAlign;
         using esphome::display::TextAlign;
         const int icon_x = W - ICON;
         it.image(icon_x, HINT_IMG_Y, img, ImageAlign::TOP_LEFT, COLOR_ON);
@@ -392,6 +385,121 @@ namespace ui {
         const int y = (it.get_height() - size);
 
         it.qr_code(x, y, qr_code_component, COLOR_ON, scale);
+    }
+
+    inline bool draw_focus_sensors(esphome::display::Display &it,
+                                   BaseFont *font_value,
+                                   BaseFont *font_small,
+                                   BaseFont *font_tiny) {
+        using esphome::display::COLOR_ON;
+        using esphome::display::TextAlign;
+
+        const std::string &focus = id(focus_sensors).state;
+
+        if (focus == "aqi") {
+            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            draw_gauge_title_left(it, X_OFFSET_ICONS, ICON,
+                                  X_OFFSET_ICONS, X_OFFSET_ICONS - BAR_H,
+                                  id(sensor_aqi_value).state, 500,
+                                  title.c_str(),
+                                  font_value, font_value);
+            return true;
+        }
+
+        if (focus == "aqi2") {
+            it.printf(0, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "AQI");
+            std::string title = id(sensor_aqi_category).state;
+            draw_gauge_title_center(it, X_OFFSET_ICONS, ICON,
+                                    X_OFFSET_ICONS, X_OFFSET_ICONS - BAR_H,
+                                    id(sensor_aqi_value).state, 500,
+                                    title.c_str(),
+                                    font_value, font_value);
+            return true;
+        }
+
+        if (focus == "aqi3") {
+            std::string title = "AQI:" + id(sensor_aqi_category).state;
+            draw_gauge_title_left(it, BAR_W, ICON,
+                                  BAR_W, BAR_W - BAR_H,
+                                  id(sensor_aqi_value).state, 500,
+                                  title.c_str(),
+                                  font_small, font_small);
+            return true;
+        }
+
+        if (focus == "aqi4") {
+            std::string title = id(sensor_aqi_category).state;
+            draw_gauge_title_center(it, BAR_W, ICON,
+                                    BAR_W, BAR_W - BAR_H,
+                                    id(sensor_aqi_value).state, 500,
+                                    title.c_str(),
+                                    font_small, font_small);
+            return true;
+        }
+
+        if (focus == "temp_and_humidity") {
+            const int x2 = right_icon_x(2);
+            const int x3 = right_icon_x(3);
+            std::string v1 = format_sensor_value(id(sensor_temperature_in).state, 0, "°C");
+            std::string v2 = format_sensor_value(id(sensor_humidity_in).state, 0, "%");
+            draw_icon_and_text(it, x2, Y_ICONS, &id(img_thermometer), font_small, v1.c_str());
+            draw_icon_and_text(it, x3, Y_ICONS, &id(img_droplet),   font_small, v2.c_str());
+            it.printf(x2 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "tem");
+            it.printf(x3 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "hum");
+            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            it.printf(0, H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", title.c_str());
+            return true;
+        }
+
+        if (focus == "pm_2_5") {
+            const int x2 = right_icon_x(2);
+            const int x3 = right_icon_x(3);
+            std::string v1 = format_sensor_value(id(sensor_pm_2_5_in).state);
+            std::string v2 = format_sensor_value(id(sensor_pm_10_0_in).state);
+            draw_icon_and_text(it, x2, Y_ICONS, &id(img_cigarette), font_small, v1.c_str());
+            draw_icon_and_text(it, x3, Y_ICONS, &id(img_wind),      font_small, v2.c_str());
+            it.printf(x2 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "2.5");
+            it.printf(x3 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "10");
+            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            it.printf(0, H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", title.c_str());
+            return true;
+        }
+
+        if (focus == "nox") {
+            const int x2 = right_icon_x(2);
+            const int x3 = right_icon_x(3);
+            std::string v1 = format_sensor_value(id(sensor_nox_in).state);
+            std::string v2 = format_sensor_value(id(sensor_voc_in).state);
+            draw_icon_and_text(it, x2, Y_ICONS, &id(img_lungs), font_small, v1.c_str());
+            draw_icon_and_text(it, x3, Y_ICONS, &id(img_gastube), font_small, v2.c_str());
+            it.printf(x2 - X_OFFSET_ICONS/2-3, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "NOX");
+            it.printf(x3 - X_OFFSET_ICONS/2-1, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "VOC");
+            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            it.printf(0, H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", title.c_str());
+            return true;
+        }
+
+        if (focus == "qr") {
+            std::string http_url;
+            if (esphome::wifi::global_wifi_component != nullptr) {
+                auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
+                for (auto &ip : addresses) {
+                    if (ip.is_set() && ip.is_ip4()) {
+                        http_url = "http://" + ip.str();
+                        break;
+                    }
+                }
+            }
+
+            if (!http_url.empty()) {
+                draw_qr_code(it, &id(device_ip_qr_code), http_url, true);
+            } else {
+                it.printf(0, H, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "no Wi-Fi");
+            }
+            return true;
+        }
+
+        return false;
     }
 
 } // namespace ui

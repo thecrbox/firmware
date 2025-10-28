@@ -1,5 +1,6 @@
 esphome:
   includes:
+    - thebox/ui_rgb_pm25fx_common.h
     - thebox/ui_rgb_fans_pm25fx.h
 
 number:

@@ -1,5 +1,6 @@
 esphome:
   includes:
+    - src/ui_rgb_pm25fx_common.h
     - src/ui_rgb_strips_pm25fx.h
 
 number:

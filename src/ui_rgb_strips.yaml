@@ -55,52 +55,62 @@ light:
     chipset: WS2812
     pin: GPIO32
     num_leds: 30
+    max_refresh_rate: 200ms
+    # ESP32 classic uses 64-symbol memory blocks (512 total across 8 channels)
+    # to avoid per-channel fragmentation. Reserve exactly one block per strip.
+    #rmt_symbols: 128
+    # false to force internal RAM allocation even if you have the the PSRAM component enabled. This can be useful if you’re experiencing issues like flickering with your leds strip
+    use_psram: false
     rgb_order: GRB
     name: "RGB 1"
     id: rgb1
     device_id: device_interface
     default_transition_length: 0s
     internal: true
-  - platform: esp32_rmt_led_strip
-    chipset: WS2812
-    pin: GPIO33
-    num_leds: 30
-    rgb_order: GRB
-    name: "RGB 2"
-    id: rgb2
-    device_id: device_interface
-    default_transition_length: 0s
-    internal: true
-  - platform: esp32_rmt_led_strip
-    chipset: WS2812
-    pin: GPIO25
-    num_leds: 30
-    rgb_order: GRB
-    name: "RGB 3"
-    id: rgb3
-    device_id: device_interface
-    default_transition_length: 0s
-    internal: true
-  - platform: esp32_rmt_led_strip
-    chipset: WS2812
-    pin: GPIO26
-    num_leds: 30
-    rgb_order: GRB
-    name: "RGB 4"
-    id: rgb4
-    device_id: device_interface
-    default_transition_length: 0s
-    internal: true
-  - platform: esp32_rmt_led_strip
-    chipset: WS2812
-    pin: GPIO27
-    num_leds: 30
-    rgb_order: GRB
-    name: "RGB 5"
-    id: rgb5
-    device_id: device_interface
-    default_transition_length: 0s
-    internal: true
+#  - platform: esp32_rmt_led_strip
+#    chipset: WS2812
+#    pin: GPIO33
+#    num_leds: 30
+#    rmt_symbols: 64
+#    rgb_order: GRB
+#    name: "RGB 2"
+#    id: rgb2
+#    device_id: device_interface
+#    default_transition_length: 0s
+#    internal: true
+#  - platform: esp32_rmt_led_strip
+#    chipset: WS2812
+#    pin: GPIO25
+#    num_leds: 30
+#    rmt_symbols: 64
+#    rgb_order: GRB
+#    name: "RGB 3"
+#    id: rgb3
+#    device_id: device_interface
+#    default_transition_length: 0s
+#    internal: true
+#  - platform: esp32_rmt_led_strip
+#    chipset: WS2812
+#    pin: GPIO26
+#    num_leds: 30
+#    rmt_symbols: 64
+#    rgb_order: GRB
+#    name: "RGB 4"
+#    id: rgb4
+#    device_id: device_interface
+#    default_transition_length: 0s
+#    internal: true
+#  - platform: esp32_rmt_led_strip
+#    chipset: WS2812
+#    pin: GPIO27
+#    num_leds: 30
+#    rmt_symbols: 64
+#    rgb_order: GRB
+#    name: "RGB 5"
+#    id: rgb5
+#    device_id: device_interface
+#    default_transition_length: 0s
+#    internal: true
   - platform: partition
     default_transition_length: 0s
     name: "RGB All"

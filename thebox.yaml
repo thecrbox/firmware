@@ -46,6 +46,10 @@ packages:
 logger:
   level: INFO
   baud_rate: 115200
+  logs:
+    # main: DEBUG
+    wifi: NONE
+    esp-idf: NONE
 
 preferences:
   # TODO: consider increasing further after we're done with development

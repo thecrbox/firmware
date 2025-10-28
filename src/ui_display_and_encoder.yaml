@@ -223,6 +223,20 @@ script:
           id(ui_inputs_locked) = true;
           id(page_init).show();
 
+  - id: ui_show_offline_mode
+    then:
+      - logger.log:
+          level: INFO
+          format: "UI: showing offline mode banner"
+      - script.execute: ui_brigthness_normal
+      - lambda: |-
+          id(ui_inputs_locked) = true;
+          id(page_init).show();
+      - delay: 3s
+      - lambda: |-
+          id(ui_inputs_locked) = false;
+      - script.execute: ui_display_mode_page
+
   - id: ui_on_rotate
     mode: queued
     parameters:
@@ -490,9 +504,27 @@ binary_sensor:
     name: "UI: Button"
     device_id: device_interface
     internal: true
+    # TODO make special clicks (provision, force offline) more reliable / easier to use
+    # maybe we don't need the very long click at all?
     on_multi_click:
       - timing:
-          - ON for at least 4s
+          - ON for at least 10s
+          - OFF for at least 0.05s
+        then:
+          - if:
+              condition:
+                lambda: 'return id(network_hotspot_active);'
+              then:
+                - logger.log:
+                    level: INFO
+                    format: "UI: ui_on_very_long_click; enabling offline mode"
+                - script.execute: network_enable_offline_mode
+              else:
+                - logger.log:
+                    level: DEBUG
+                    format: "UI: ui_on_very_long_click; hotspot inactive, ignoring"
+      - timing:
+          - ON for 4s to 9.9s
           - OFF for at least 0.05s
         then:
           - script.execute: ui_force_setup_mode
@@ -570,89 +602,6 @@ qr_code:
   - id: device_ip_qr_code
     value: ""
     ecc: LOW
-
-image:
-  - file: "./images/push_small.png"
-    id: img_push_small
-    type: BINARY
-  - file: "./images/turn_small.png"
-    id: img_turn_small
-    type: BINARY
-  - file: "./images/turn2.png"
-    id: img_turn
-    type: BINARY
-  - file: "images/wrench.png"
-    id: img_wrench
-    type: BINARY
-  - file: "images/robot.png"
-    id: img_auto
-    type: BINARY
-  - file: "images/hand.png"
-    id: img_manual
-    type: BINARY
-  - file: "images/skull.png"
-    id: img_off
-    type: BINARY
-  - file: "images/lock.png"
-    id: img_lock
-    type: BINARY
-  - file: "images/lock_open.png"
-    id: img_lock_open
-    type: BINARY
-  - file: "images/sun.png"
-    id: img_sun
-    type: BINARY
-  - file: "images/moon.png"
-    id: img_moon
-    type: BINARY
-  - file: "images/light_on.png"
-    id: img_light_on
-    type: BINARY
-  - file: "images/light_off.png"
-    id: img_light_off
-    type: BINARY
-  - file: "images/arrow_right.png"
-    id: img_arrow_right
-    type: BINARY
-  - file: "images/arrow_left.png"
-    id: img_arrow_left
-    type: BINARY
-  - file: "images/clock.png"
-    id: img_clock
-    type: BINARY
-  - file: "images/fan_on.png"
-    id: img_fan_on
-    type: BINARY
-  - file: "images/fan_off.png"
-    id: img_fan_off
-    type: BINARY
-  - file: "images/mask.png"
-    id: img_mask
-    type: BINARY
-  - file: "images/wifi0.png"
-    id: img_wifi0
-    type: BINARY
-  - file: "images/wifi3.png"
-    id: img_wifi3
-    type: BINARY
-  - file: "images/cigarette.png"
-    id: img_cigarette
-    type: BINARY
-  - file: "images/lungs.png"
-    id: img_lungs
-    type: BINARY
-  - file: "images/gastube.png"
-    id: img_gastube
-    type: BINARY
-  - file: "images/wind.png"
-    id: img_wind
-    type: BINARY
-  - file: "images/thermometer.png"
-    id: img_thermometer
-    type: BINARY
-  - file: "images/droplet.png"
-    id: img_droplet
-    type: BINARY
 
 display:
   - platform: ${UI_DISPLAY_PLATFORM}
@@ -821,19 +770,15 @@ display:
           ui::draw_mode_header_2icons_title_wifi(it, font_big, "OFF", id(img_off));
 
           std::string http_url;
-          if (esphome::wifi::global_wifi_component != nullptr) {
-              auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
-              for (auto &ip : addresses) {
-                  if (ip.is_set() && ip.is_ip4()) {
-                      http_url = "http://" + ip.str();
-                      it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", http_url.c_str());
-                      break;
-                  }
-              }
-          }
-
-          if (!http_url.empty()) {
+          if (ui::get_device_http_url(http_url)) {
+              it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", http_url.c_str());
               ui::draw_qr_code(it, id(device_ip_qr_code), http_url, false);
+          } else {
+              if (id(network_offline_mode)) {
+                it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "offline");
+              } else {
+                it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "no Wi-Fi");
+              }
           }
 
       - id: page_init
@@ -851,14 +796,22 @@ display:
             int info_y = ui::Y_OFFSET_ICON_SUB_ROW1;
 
             ui::draw_mode_header_2icons_title(it, font_big, "HELLO", id(img_turn));
+            ui::draw_qr_code(it, id(device_ip_qr_code), instructions_url);
 
             it.printf(text_x, info_y, font_small, COLOR_ON, TextAlign::TOP_LEFT, "Scan to");
             info_y += 15;
             it.printf(text_x, info_y, font_small, COLOR_ON, TextAlign::TOP_LEFT, "configure");
-            info_y = 64-8;
-            it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "()");
+            info_y += 15;
+          } else if (id(network_offline_mode)) {
+            const int text_x = 0;
+            int info_y = ui::Y_OFFSET_ICON_SUB_ROW1;
 
-            ui::draw_qr_code(it, id(device_ip_qr_code), instructions_url);
+            ui::draw_mode_header_2icons_title_wifi(it, font_big, "OFFLINE MODE", id(img_turn));
+
+            it.printf(text_x, info_y, font_small, COLOR_ON, TextAlign::TOP_LEFT, "Wi-Fi disabled");
+            info_y += 15;
+            it.printf(text_x, info_y, font_small, COLOR_ON, TextAlign::TOP_LEFT, "Hold 4s to configure Wi-Fi");
+            it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "Work offline");
           } else {
             ui::draw_mode_header_2icons_title_wifi(it, font_big, "CONNECTED", id(img_turn));
 
@@ -867,14 +820,9 @@ display:
             it.printf(text_x, info_y, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "will restart soon...");
             info_y += 8;
 
-            if (esphome::wifi::global_wifi_component != nullptr) {
-              auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
-              for (auto &ip : addresses) {
-                  if (ip.is_set() && ip.is_ip4()) {
-                      it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "http://%s", ip.str().c_str());
-                      break;
-                  }
-              }
+            std::string http_url;
+            if (ui::get_device_http_url(http_url)) {
+              it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", http_url.c_str());
             }
           }
 

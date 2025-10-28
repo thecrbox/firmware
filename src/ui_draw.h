@@ -44,6 +44,10 @@ namespace ui {
     inline constexpr int DESC_X       = 0;
     inline constexpr int DESC_Y       = Y_ICONS + Y_OFFSET_ICON_SUB_ROW2; // ~50
 
+    inline bool offline_mode = false;
+    inline bool is_offline_mode() { return offline_mode; }
+    inline void set_offline_mode(bool v) { offline_mode = v; }
+
 // ================== Small positioning helpers ==================
     inline int right_icon_x(int index_from_right) {
         return X_LAST_ICON_CENTER - index_from_right * X_OFFSET_ICONS;
@@ -280,7 +284,9 @@ namespace ui {
                                  esphome::display::BaseImage *img_right = nullptr) {
         draw_mode_header_2icons_title(it, font_big, title, img_left, img_right);
 
-        if (id(mywifi).is_connected()) {
+        if (is_offline_mode()) {
+            it.image(W - ICON, 0, &id(img_wifi_disabled), COLOR_ON);
+        } else if (id(mywifi).is_connected()) {
             it.image(W - ICON, 0, &id(img_wifi3), COLOR_ON);
         } else {
             it.image(W - ICON, 0, &id(img_wifi0), COLOR_ON);
@@ -365,6 +371,28 @@ namespace ui {
             it.printf(DESC_X, DESC_Y, font, COLOR_ON, TextAlign::TOP_LEFT, "%s", text);
     }
 
+    inline bool get_device_http_url(std::string &out_http_url) {
+        out_http_url.clear();
+
+        if (!id(mywifi).is_connected()) {
+            return false;
+        }
+
+        if (esphome::wifi::global_wifi_component == nullptr) {
+            return false;
+        }
+
+        auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
+        for (auto &ip : addresses) {
+            if (ip.is_set() && ip.is_ip4()) {
+                out_http_url = "http://" + ip.str();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     inline void draw_qr_code(esphome::display::Display &it,
                             esphome::qr_code::QrCode *qr_code_component,
                             const std::string &val, bool left_side = false) {
@@ -374,9 +402,11 @@ namespace ui {
             return;
         }
 
-        if (!val.empty()) {
-            qr_code_component->set_value(val);
+        if (val.empty()) {
+            return;
         }
+
+        qr_code_component->set_value(val);
 
         constexpr int scale = 2;
         const int module_size = static_cast<int>(qr_code_component->get_size());
@@ -481,17 +511,7 @@ namespace ui {
 
         if (focus == "qr") {
             std::string http_url;
-            if (esphome::wifi::global_wifi_component != nullptr) {
-                auto addresses = esphome::wifi::global_wifi_component->get_ip_addresses();
-                for (auto &ip : addresses) {
-                    if (ip.is_set() && ip.is_ip4()) {
-                        http_url = "http://" + ip.str();
-                        break;
-                    }
-                }
-            }
-
-            if (!http_url.empty()) {
+            if (get_device_http_url(http_url)) {
                 draw_qr_code(it, &id(device_ip_qr_code), http_url, true);
             } else {
                 it.printf(0, H, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "no Wi-Fi");

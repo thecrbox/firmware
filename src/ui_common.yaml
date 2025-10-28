@@ -20,3 +20,89 @@ web_server:
     - id: sorting_group_interface_config_manual
       name: "Config Interface MANUAL"
       sorting_weight: 21
+
+image:
+  - file: "./images/push_small.png"
+    id: img_push_small
+    type: BINARY
+  - file: "./images/turn_small.png"
+    id: img_turn_small
+    type: BINARY
+  - file: "./images/turn2.png"
+    id: img_turn
+    type: BINARY
+  - file: "images/wrench.png"
+    id: img_wrench
+    type: BINARY
+  - file: "images/robot.png"
+    id: img_auto
+    type: BINARY
+  - file: "images/hand.png"
+    id: img_manual
+    type: BINARY
+  - file: "images/skull.png"
+    id: img_off
+    type: BINARY
+  - file: "images/lock.png"
+    id: img_lock
+    type: BINARY
+  - file: "images/lock_open.png"
+    id: img_lock_open
+    type: BINARY
+  - file: "images/sun.png"
+    id: img_sun
+    type: BINARY
+  - file: "images/moon.png"
+    id: img_moon
+    type: BINARY
+  - file: "images/light_on.png"
+    id: img_light_on
+    type: BINARY
+  - file: "images/light_off.png"
+    id: img_light_off
+    type: BINARY
+  - file: "images/arrow_right.png"
+    id: img_arrow_right
+    type: BINARY
+  - file: "images/arrow_left.png"
+    id: img_arrow_left
+    type: BINARY
+  - file: "images/clock.png"
+    id: img_clock
+    type: BINARY
+  - file: "images/fan_on.png"
+    id: img_fan_on
+    type: BINARY
+  - file: "images/fan_off.png"
+    id: img_fan_off
+    type: BINARY
+  - file: "images/mask.png"
+    id: img_mask
+    type: BINARY
+  - file: "images/wifi_disabled.png"
+    id: img_wifi_disabled
+    type: BINARY
+  - file: "images/wifi0.png"
+    id: img_wifi0
+    type: BINARY
+  - file: "images/wifi3.png"
+    id: img_wifi3
+    type: BINARY
+  - file: "images/cigarette.png"
+    id: img_cigarette
+    type: BINARY
+  - file: "images/lungs.png"
+    id: img_lungs
+    type: BINARY
+  - file: "images/gastube.png"
+    id: img_gastube
+    type: BINARY
+  - file: "images/wind.png"
+    id: img_wind
+    type: BINARY
+  - file: "images/thermometer.png"
+    id: img_thermometer
+    type: BINARY
+  - file: "images/droplet.png"
+    id: img_droplet
+    type: BINARY

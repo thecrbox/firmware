@@ -1,3 +1,9 @@
+esphome:
+  on_boot:
+    priority: 900
+    then:
+      - script.execute: network_apply_offline_state
+
 wifi:
 #  ssid: !secret wifi_ssid
 #  password: !secret wifi_password
@@ -7,6 +13,8 @@ wifi:
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ap_timeout: 0s
+
+  reboot_timeout: 5min
 
   id: mywifi
 
@@ -67,13 +75,91 @@ globals:
     type: bool
     restore_value: true
     initial_value: 'true'
+  - id: network_offline_mode
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+
+switch:
+  - platform: template
+    name: "Work offline"
+    id: network_offline_mode_switch
+    icon: "mdi:wifi-off"
+    device_id: device_interface
+    lambda: 'return id(network_offline_mode);'
+    turn_on_action:
+      - script.execute: network_enable_offline_mode
+    turn_off_action:
+      - script.execute: network_disable_offline_mode
+    web_server:
+      sorting_group_id: sorting_group_interface
+      sorting_weight: -10
 
 script:
+  - id: network_apply_offline_state
+    then:
+      - if:
+          condition:
+            lambda: 'return id(network_offline_mode);'
+          then:
+            - logger.log:
+                level: INFO
+                format: "Network: offline mode active, disabling Wi-Fi"
+            - wifi.disable
+            - lambda: |-
+                ui::set_offline_mode(true);
+          else:
+            - logger.log:
+                level: INFO
+                format: "Network: offline mode inactive, enabling Wi-Fi"
+            - wifi.enable
+            - lambda: |-
+                ui::set_offline_mode(false);
+
+  - id: network_enable_offline_mode
+    then:
+      - if:
+          condition:
+            lambda: 'return id(network_offline_mode);'
+          then:
+            - logger.log:
+                level: DEBUG
+                format: "Network: offline mode already enabled"
+          else:
+            - logger.log:
+                level: INFO
+                format: "Network: enabling offline mode"
+            - lambda: |-
+                id(network_offline_mode) = true;
+                id(network_hotspot_active) = false;
+                global_preferences->sync();
+            - script.execute: network_apply_offline_state
+            - script.execute: ui_show_offline_mode
+
+  - id: network_disable_offline_mode
+    then:
+      - if:
+          condition:
+            lambda: 'return id(network_offline_mode);'
+          then:
+            - logger.log:
+                level: INFO
+                format: "Network: disabling offline mode"
+            - lambda: |-
+                id(network_offline_mode) = false;
+                global_preferences->sync();
+            - script.execute: network_apply_offline_state
+          else:
+            - logger.log:
+                level: DEBUG
+                format: "Network: offline mode already disabled"
+
   - id: network_switch_to_hotspot
     then:
       - logger.log:
           level: INFO
           format: "Network: disabling station mode, restarting to enable hotspot"
+      - script.execute: network_disable_offline_mode
 
       - lambda: |-
           id(network_hotspot_active) = true;

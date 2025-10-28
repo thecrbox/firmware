@@ -50,6 +50,26 @@ number:
     step: 1.0
     restore_value: true
 
+switch:
+  - platform: template
+    name: "RGB Boot Animation"
+    id: cfg_rgb_boot_animation
+    device_id: device_interface
+    entity_category: "config"
+    icon: "mdi:movie-play"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    web_server:
+      sorting_group_id: sorting_group_interface
+    turn_on_action:
+      - switch.template.publish:
+          id: cfg_rgb_boot_animation
+          state: ON
+    turn_off_action:
+      - switch.template.publish:
+          id: cfg_rgb_boot_animation
+          state: OFF
+
 light:
   - platform: esp32_rmt_led_strip
     chipset: WS2812
@@ -155,10 +175,22 @@ interval:
   - interval: 100ms
     then:
       - lambda: |-
+          using std::isnan;
+          const bool pm25_available = id(sensor_pm_2_5).has_state() && !isnan(id(sensor_pm_2_5).state);
+          const bool show_boot_animation = !pm25_available && id(cfg_rgb_boot_animation).state;
+          const char *const effect_state = "PM2.5 State";
+          const char *const effect_boot = "PM2.5 Boot Sweep";
+
           if (id(purifier_mode).state == "MANUAL") {
             // just set to manual brightness
-            int brightness = (int)id(cfg_brightness_manual).state;
-            id(all_fans_rgb).turn_on().set_effect("PM2.5 State").set_brightness(brightness / 100.0f).perform();
+            const float brightness = id(cfg_brightness_manual).state / 100.0f;
+            if (pm25_available) {
+              id(all_fans_rgb).turn_on().set_effect(effect_state).set_brightness(brightness).perform();
+            } else if (show_boot_animation) {
+              id(all_fans_rgb).turn_on().set_effect(effect_boot).set_brightness(brightness).perform();
+            } else {
+              id(all_fans_rgb).turn_off().set_brightness(0.0f).perform();
+            }
           } else if (id(purifier_mode).state == "AUTO") {
             auto td = id(cfg_auto_time_day).state_as_esptime();
             auto tn = id(cfg_auto_time_night).state_as_esptime();
@@ -175,13 +207,19 @@ interval:
                          (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
             }
           
-            int brightness = 0;
+            float brightness = 0.0f;
             if (day_mode) {
-              brightness = (int)id(cfg_brightness_auto_day).state;
+              brightness = id(cfg_brightness_auto_day).state / 100.0f;
             } else {
-              brightness = (int)id(cfg_brightness_auto_night).state;
+              brightness = id(cfg_brightness_auto_night).state / 100.0f;
             }
-            id(all_fans_rgb).turn_on().set_effect("PM2.5 State").set_brightness(brightness / 100.0f).perform();
+            if (pm25_available) {
+              id(all_fans_rgb).turn_on().set_effect(effect_state).set_brightness(brightness).perform();
+            } else if (show_boot_animation) {
+              id(all_fans_rgb).turn_on().set_effect(effect_boot).set_brightness(brightness).perform();
+            } else {
+              id(all_fans_rgb).turn_off().set_brightness(0.0f).perform();
+            }
           } else {
             // some other state; off?
             id(all_fans_rgb).turn_off().set_brightness(0.0f).perform();

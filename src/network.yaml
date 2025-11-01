@@ -49,8 +49,8 @@ esp32_improv:
 
 api:
   id: myapi
-  encryption:
-    key: !secret api_key
+#  encryption:
+#    key: !secret api_key
   # home assistant is not needed for everyone, so let's disable by default
   reboot_timeout: 0s
 

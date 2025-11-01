@@ -44,7 +44,7 @@ namespace ui {
     inline constexpr int DESC_X       = 0;
     inline constexpr int DESC_Y       = Y_ICONS + Y_OFFSET_ICON_SUB_ROW2; // ~50
 
-    inline bool offline_mode = false;
+    static inline bool offline_mode = false;
     inline bool is_offline_mode() { return offline_mode; }
     inline void set_offline_mode(bool v) { offline_mode = v; }
 
@@ -511,7 +511,9 @@ namespace ui {
 
         if (focus == "qr") {
             std::string http_url;
-            if (get_device_http_url(http_url)) {
+            if (is_offline_mode()) {
+                it.printf(0, H, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "Wi-Fi off");
+            } else if (get_device_http_url(http_url)) {
                 draw_qr_code(it, &id(device_ip_qr_code), http_url, true);
             } else {
                 it.printf(0, H, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "no Wi-Fi");

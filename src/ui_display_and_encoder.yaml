@@ -50,6 +50,8 @@ script:
   - id: ui_tick
     then:
       - lambda: |-
+          ui::set_offline_mode(id(network_offline_mode));
+
           if (id(ui_inputs_locked)) {
             ESP_LOGD("UI", "ui_tick: ignoring, inputs locked");
             return;
@@ -223,7 +225,7 @@ script:
           id(ui_inputs_locked) = true;
           id(page_init).show();
 
-  - id: ui_show_offline_mode
+  - id: ui_show_offline_mode_banner
     then:
       - logger.log:
           level: INFO
@@ -518,7 +520,7 @@ binary_sensor:
                 - logger.log:
                     level: INFO
                     format: "UI: ui_on_very_long_click; enabling offline mode"
-                - script.execute: network_enable_offline_mode
+                - script.execute: network_set_offline
               else:
                 - logger.log:
                     level: DEBUG
@@ -528,7 +530,7 @@ binary_sensor:
           - OFF for at least 0.05s
         then:
           - script.execute: ui_force_setup_mode
-          - script.execute: network_switch_to_hotspot
+          - script.execute: network_set_hotspot
       - timing:
           - ON for 0.3s to 3.9s
           - OFF for at least 0.05s
@@ -775,7 +777,7 @@ display:
               ui::draw_qr_code(it, id(device_ip_qr_code), http_url, false);
           } else {
               if (id(network_offline_mode)) {
-                it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "offline");
+                it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "Wi-Fi off");
               } else {
                 it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "no Wi-Fi");
               }
@@ -810,8 +812,7 @@ display:
 
             it.printf(text_x, info_y, font_small, COLOR_ON, TextAlign::TOP_LEFT, "Wi-Fi disabled");
             info_y += 15;
-            it.printf(text_x, info_y, font_small, COLOR_ON, TextAlign::TOP_LEFT, "Hold 4s to configure Wi-Fi");
-            it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "Work offline");
+            it.printf(0, 64, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "will work offline");
           } else {
             ui::draw_mode_header_2icons_title_wifi(it, font_big, "CONNECTED", id(img_turn));
 

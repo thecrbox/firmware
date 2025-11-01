@@ -1,8 +1,8 @@
 esphome:
   on_boot:
-    priority: 900
-    then:
-      - script.execute: network_apply_offline_state
+    - priority: 900
+      then:
+        - script.execute: _network_update_state
 
 wifi:
 #  ssid: !secret wifi_ssid
@@ -15,37 +15,20 @@ wifi:
     ap_timeout: 0s
 
   reboot_timeout: 5min
-
   id: mywifi
 
   on_connect:
     then:
       - script.execute: wifi_on_connected
 
-  on_disconnect:
-    then:
-      - script.execute: wifi_on_disconnected
-
-
-
 captive_portal:
 
-# this MAY be great, but it causes some random crashes (oom?) when enabled with the rest of the system
-# TODO: can we enable it onlyu when provisioning (network_hotspot_active=true), and disable after?
 esp32_improv:
   id: myimprov
   authorizer: none
   on_provisioned:
     then:
-      - logger.log:
-          level: INFO
-          format: "Network: provisioned, disabling hotspot and restarting"
-      - lambda: |-
-          id(network_hotspot_active) = false;
-          global_preferences->sync();
-      - script.execute: ui_force_post_provision
-      - delay: 3000ms
-      - switch.turn_on: device_restart_switch
+      - script.execute: _network_on_provisioned
 
 api:
   id: myapi
@@ -53,9 +36,6 @@ api:
 #    key: !secret api_key
   # home assistant is not needed for everyone, so let's disable by default
   reboot_timeout: 0s
-
-
-
 
 ota:
   - platform: esphome
@@ -80,23 +60,20 @@ globals:
     restore_value: true
     initial_value: 'false'
 
-switch:
-  - platform: template
-    name: "Work offline"
-    id: network_offline_mode_switch
-    icon: "mdi:wifi-off"
-    device_id: device_interface
-    lambda: 'return id(network_offline_mode);'
-    turn_on_action:
-      - script.execute: network_enable_offline_mode
-    turn_off_action:
-      - script.execute: network_disable_offline_mode
-    web_server:
-      sorting_group_id: sorting_group_interface
-      sorting_weight: -10
-
 script:
-  - id: network_apply_offline_state
+  - id: _network_on_provisioned
+    then:
+      - logger.log:
+          level: INFO
+          format: "Network: _network_on_provisioned called"
+      - lambda: |-
+          id(network_hotspot_active) = false;
+          global_preferences->sync();
+      - script.execute: ui_force_post_provision
+      - delay: 3000ms
+      - switch.turn_on: device_restart_switch
+
+  - id: _network_update_state
     then:
       - if:
           condition:
@@ -104,39 +81,39 @@ script:
           then:
             - logger.log:
                 level: INFO
-                format: "Network: offline mode active, disabling Wi-Fi"
+                format: "Network: should be offline, disabling Wi-Fi"
             - wifi.disable
             - lambda: |-
                 ui::set_offline_mode(true);
           else:
             - logger.log:
                 level: INFO
-                format: "Network: offline mode inactive, enabling Wi-Fi"
+                format: "Network: should be online, enabling Wi-Fi"
             - wifi.enable
             - lambda: |-
                 ui::set_offline_mode(false);
 
-  - id: network_enable_offline_mode
+  - id: network_set_offline
     then:
       - if:
           condition:
             lambda: 'return id(network_offline_mode);'
           then:
             - logger.log:
-                level: DEBUG
-                format: "Network: offline mode already enabled"
+                level: ERROR
+                format: "Network: already offline"
           else:
             - logger.log:
                 level: INFO
-                format: "Network: enabling offline mode"
+                format: "Network: going offline"
             - lambda: |-
                 id(network_offline_mode) = true;
                 id(network_hotspot_active) = false;
                 global_preferences->sync();
-            - script.execute: network_apply_offline_state
-            - script.execute: ui_show_offline_mode
+            - script.execute: _network_update_state
+            - script.execute: ui_show_offline_mode_banner
 
-  - id: network_disable_offline_mode
+  - id: network_set_online
     then:
       - if:
           condition:
@@ -144,22 +121,22 @@ script:
           then:
             - logger.log:
                 level: INFO
-                format: "Network: disabling offline mode"
+                format: "Network: going online"
             - lambda: |-
                 id(network_offline_mode) = false;
                 global_preferences->sync();
-            - script.execute: network_apply_offline_state
+            - script.execute: _network_update_state
           else:
             - logger.log:
-                level: DEBUG
-                format: "Network: offline mode already disabled"
+                level: ERROR
+                format: "Network: already online"
 
-  - id: network_switch_to_hotspot
+  - id: network_set_hotspot
     then:
       - logger.log:
           level: INFO
           format: "Network: disabling station mode, restarting to enable hotspot"
-      - script.execute: network_disable_offline_mode
+      - script.execute: network_set_online
 
       - lambda: |-
           id(network_hotspot_active) = true;
@@ -175,25 +152,8 @@ script:
           condition:
             lambda: 'return id(network_hotspot_active);'
           then:
-            - logger.log:
-                level: INFO
-                format: "Network: hotspot not needed anymore, disabling"
-            - lambda: |-
-                id(network_hotspot_active) = false;
-                global_preferences->sync();
-            - script.execute: ui_force_post_provision
-            - delay: 3000ms
-            - switch.turn_on: device_restart_switch
+            - script.execute: _network_on_provisioned
           else:
             - logger.log:
                 level: INFO
                 format: "Network: hotspot was not active, no restart needed"
-
-  - id: wifi_on_disconnected
-    then:
-      - logger.log:
-          level: WARN
-          format: "Network: wifi_on_disconnected"
-#      - lambda: |-
-#          ESP_LOGI("Network", "Network: starting mywebserver setup");
-#          id(mywebserver).setup();

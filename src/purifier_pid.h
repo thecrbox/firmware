@@ -5,10 +5,12 @@
 #include "esphome/components/number/number.h"     // For id(cfg_*), id(diag_*)
 #include "esphome/components/sensor/sensor.h"     // For id(sensor_*)
 #include "esphome/components/fan/fan.h"           // For id(fans_speed)
+#include "esphome/components/time/real_time_clock.h"
 #include "esphome/core/log.h"                     // For ESP_LOGD
 
 #include <chrono>
 #include <algorithm> // For std::ranges::clamp
+#include <cmath>
 
 class PID {
 protected:
@@ -58,21 +60,33 @@ public:
         const std::chrono::duration<double> elapsed_seconds{now - prev_calculation_timestamp};
         float time = elapsed_seconds.count();
 
+        const bool pm_ready = id(sensor_pm_2_5).has_state() && !std::isnan(id(sensor_pm_2_5).state);
+
+        MakeWarmer();
+        if (!pm_ready) {
+            ESP_LOGD("main", "PID::Calculate skipped - PM2.5 sensor not ready");
+            prev_calculation_timestamp = now;
+            return;
+        }
+
         // limit the fans
         float fan_min = id(cfg_fan_lvl_min).state;
         float fan_max = 100;
         auto t = id(mysntp).now();
+        const bool time_valid = t.is_valid();
         auto td = id(cfg_auto_time_day).state_as_esptime();
         auto tn = id(cfg_auto_time_night).state_as_esptime();
         bool day_mode = true;
-        if (td.hour < tn.hour || (td.hour == tn.hour && td.minute < tn.minute)) {
-            // normal case: day starts before night
-            day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) &&
-                       (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
-        } else {
-            // special case: day starts after night (overnight)
-            day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) ||
-                       (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+        if (time_valid) {
+            if (td.hour < tn.hour || (td.hour == tn.hour && td.minute < tn.minute)) {
+                // normal case: day starts before night
+                day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) &&
+                           (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+            } else {
+                // special case: day starts after night (overnight)
+                day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) ||
+                           (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+            }
         }
 
         if (!day_mode) {
@@ -93,7 +107,10 @@ public:
         float pm25f_deadband = (float)id(cfg_pm25_deadband).state;
         float delta = pm25f_curr - pm25f_prev;
 
-        MakeWarmer();
+        if (!time_valid) {
+            ESP_LOGD("main", "PID::Calculate running without valid time - assuming day mode");
+        }
+
         if (IsWarm()) {
 
             if (delta > 0) {

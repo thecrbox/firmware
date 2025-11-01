@@ -329,13 +329,10 @@ time:
   platform: sntp
   id: mysntp
   timezone: Europe/Warsaw
-  on_time:
-    - seconds: /1
-      then:
-        - if:
-            condition:
-              wifi.connected:
-            then:
-              - lambda:  |-
-                  PID::Instance().Calculate();
-                  PID::Instance().Control();
+
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          PID::Instance().Calculate();
+          PID::Instance().Control();

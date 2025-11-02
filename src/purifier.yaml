@@ -328,7 +328,6 @@ datetime:
 time:
   platform: sntp
   id: mysntp
-  timezone: Europe/Warsaw
 
 interval:
   - interval: 1s

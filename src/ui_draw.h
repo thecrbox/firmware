@@ -427,7 +427,7 @@ namespace ui {
         const std::string &focus = id(focus_sensors).state;
 
         if (focus == "aqi") {
-            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            std::string title = "AQI " + id(sensor_aqi_category).state;
             draw_gauge_title_left(it, X_OFFSET_ICONS, ICON,
                                   X_OFFSET_ICONS, X_OFFSET_ICONS - BAR_H,
                                   id(sensor_aqi_value).state, 500,
@@ -476,7 +476,7 @@ namespace ui {
             draw_icon_and_text(it, x3, Y_ICONS, &id(img_droplet),   font_small, v2.c_str());
             it.printf(x2 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "tem");
             it.printf(x3 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "hum");
-            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            std::string title = "AQI " + id(sensor_aqi_category).state;
             it.printf(0, H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", title.c_str());
             return true;
         }
@@ -490,7 +490,7 @@ namespace ui {
             draw_icon_and_text(it, x3, Y_ICONS, &id(img_wind),      font_small, v2.c_str());
             it.printf(x2 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "2.5");
             it.printf(x3 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "10");
-            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            std::string title = "AQI " + id(sensor_aqi_category).state;
             it.printf(0, H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", title.c_str());
             return true;
         }
@@ -504,12 +504,15 @@ namespace ui {
             draw_icon_and_text(it, x3, Y_ICONS, &id(img_gastube), font_small, v2.c_str());
             it.printf(x2 - X_OFFSET_ICONS/2-3, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "NOX");
             it.printf(x3 - X_OFFSET_ICONS/2-1, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "VOC");
-            std::string title = "AQI: " + id(sensor_aqi_category).state;
+            std::string title = "AQI " + id(sensor_aqi_category).state;
             it.printf(0, H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", title.c_str());
             return true;
         }
 
         if (focus == "qr") {
+            auto nowtime = id(mysntp).now();
+            it.printf(W, H, font_value, COLOR_ON, TextAlign::BOTTOM_RIGHT, "%02d:%02d", nowtime.hour, nowtime.minute);
+
             std::string http_url;
             if (is_offline_mode()) {
                 it.printf(0, H, font_tiny, COLOR_ON, TextAlign::BOTTOM_LEFT, "Wi-Fi off");

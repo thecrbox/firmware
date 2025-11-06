@@ -6,6 +6,13 @@ uart:
   rx_pin: ${SENSOR_UART_RX}
   baud_rate: 9600
 
+switch:
+  - platform: gpio
+    pin: ${SENSOR_UART_ENABLE}
+    name: "pmsx003 SET pin"
+    restore_mode: RESTORE_DEFAULT_ON
+    internal: false
+
 sensor:
   - platform: pmsx003
     type: PMSX003

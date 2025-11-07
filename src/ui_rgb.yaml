@@ -1,0 +1,325 @@
+esphome:
+  includes:
+    - src/ui_rgb_pm25fx_common.h
+    - src/ui_rgb_pm25fx_profiles.h
+  on_boot:
+    priority: -50
+    then:
+      - script.execute: sync_rgb_profile_select
+
+globals:
+  - id: rgb_current_brightness
+    type: float
+    restore_value: false
+    initial_value: '0.0f'
+  - id: rgb_is_on
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+
+number:
+  - platform: template
+    name: "MANUAL: brightness"
+    id: cfg_brightness_manual
+    device_id: device_interface
+    web_server:
+      sorting_group_id: sorting_group_interface_config_manual
+    entity_category: "config"
+    unit_of_measurement: "%"
+    icon: "mdi:brightness-percent"
+    optimistic: true
+    restore_value: true
+    min_value: 0.0
+    max_value: 100.0
+    initial_value: 100
+    step: 1.0
+  - platform: template
+    name: "AUTO: brightness NIGHT"
+    id: cfg_brightness_auto_night
+    device_id: device_interface
+    web_server:
+      sorting_group_id: sorting_group_interface_config_auto
+    entity_category: "config"
+    unit_of_measurement: "%"
+    icon: "mdi:brightness-percent"
+    optimistic: true
+    min_value: 0.0
+    max_value: 100.0
+    initial_value: 25
+    step: 1.0
+    restore_value: true
+  - platform: template
+    name: "AUTO: brightness DAY"
+    id: cfg_brightness_auto_day
+    device_id: device_interface
+    web_server:
+      sorting_group_id: sorting_group_interface_config_auto
+    entity_category: "config"
+    unit_of_measurement: "%"
+    icon: "mdi:brightness-percent"
+    optimistic: true
+    min_value: 0.0
+    max_value: 100.0
+    initial_value: 100
+    step: 1.0
+    restore_value: true
+
+select:
+  - platform: template
+    name: "RGB hardware"
+    id: cfg_rgb_profile
+    device_id: device_interface
+    optimistic: false
+    options:
+      - "LED strip (30)"
+      - "RGB fans (5x8)"
+    web_server:
+      sorting_group_id: sorting_group_interface
+    set_action:
+      - lambda: |-
+          id(cfg_rgb_profile).publish_state(x);
+      - script.execute: apply_rgb_state
+    restore_value: true
+
+switch:
+  - platform: template
+    name: "RGB Boot Animation"
+    id: cfg_rgb_boot_animation
+    device_id: device_interface
+    entity_category: "config"
+    icon: "mdi:movie-play"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    web_server:
+      sorting_group_id: sorting_group_interface
+    turn_on_action:
+      - switch.template.publish:
+          id: cfg_rgb_boot_animation
+          state: ON
+    turn_off_action:
+      - switch.template.publish:
+          id: cfg_rgb_boot_animation
+          state: OFF
+
+light:
+  - platform: esp32_rmt_led_strip
+    chipset: WS2811
+    pin: GPIO32
+    num_leds: 30
+    rmt_symbols: 128
+    rgb_order: GRB
+    name: "RGB channel 1"
+    id: rgb_fan1
+    device_id: device_interface
+    default_transition_length: 0s
+    internal: true
+    max_refresh_rate: 200ms
+    #use_psram: false
+  - platform: esp32_rmt_led_strip
+    chipset: WS2812
+    pin: GPIO33
+    num_leds: 8
+    rmt_symbols: 64
+    rgb_order: GRB
+    name: "RGB fan 2"
+    id: rgb_fan2
+    device_id: device_interface
+    default_transition_length: 0s
+    internal: true
+    max_refresh_rate: 200ms
+  - platform: esp32_rmt_led_strip
+    chipset: WS2812
+    pin: GPIO25
+    num_leds: 8
+    rmt_symbols: 64
+    rgb_order: GRB
+    name: "RGB fan 3"
+    id: rgb_fan3
+    device_id: device_interface
+    default_transition_length: 0s
+    internal: true
+    max_refresh_rate: 200ms
+  - platform: esp32_rmt_led_strip
+    chipset: WS2812
+    pin: GPIO26
+    num_leds: 8
+    rmt_symbols: 64
+    rgb_order: GRB
+    name: "RGB fan 4"
+    id: rgb_fan4
+    device_id: device_interface
+    default_transition_length: 0s
+    internal: true
+    max_refresh_rate: 200ms
+  - platform: esp32_rmt_led_strip
+    chipset: WS2812
+    pin: GPIO27
+    num_leds: 8
+    rmt_symbols: 64
+    rgb_order: GRB
+    name: "RGB fan 5"
+    id: rgb_fan5
+    device_id: device_interface
+    default_transition_length: 0s
+    internal: true
+    max_refresh_rate: 200ms
+
+  - platform: partition
+    default_transition_length: 0s
+    name: "RGB strip group"
+    id: rgb_profile_strip
+    device_id: device_interface
+    internal: true
+    segments:
+      - id: rgb_fan1
+        from: 0
+        to: 29
+    effects:
+      - addressable_lambda:
+          name: "PM2.5 Boot Sweep"
+          update_interval: 150ms
+          lambda: |-
+            float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
+            thebox_light_effects::pm25_boot_sweep_strip(it, speed);
+      - addressable_lambda:
+          name: "PM2.5 State"
+          update_interval: 33ms
+          lambda: |-
+            float pm25 = id(sensor_pm_2_5).state;
+            float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
+            thebox_light_effects::pm25_state_strip(it, pm25, speed);
+
+  - platform: partition
+    default_transition_length: 0s
+    name: "RGB fans group"
+    id: rgb_profile_fans
+    device_id: device_interface
+    internal: true
+    segments:
+      - id: rgb_fan1
+        from: 0
+        to: 7
+      - id: rgb_fan2
+        from: 0
+        to: 7
+      - id: rgb_fan3
+        from: 0
+        to: 7
+      - id: rgb_fan4
+        from: 0
+        to: 7
+      - id: rgb_fan5
+        from: 0
+        to: 7
+    effects:
+      - addressable_lambda:
+          name: "PM2.5 Boot Sweep"
+          update_interval: 150ms
+          lambda: |-
+            float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
+            thebox_light_effects::pm25_boot_sweep_fans(it, speed);
+      - addressable_lambda:
+          name: "PM2.5 State"
+          update_interval: 33ms
+          lambda: |-
+            float pm25 = id(sensor_pm_2_5).state;
+            float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
+            thebox_light_effects::pm25_state_fans(it, pm25, speed);
+
+script:
+  - id: sync_rgb_profile_select
+    then:
+      - lambda: |-
+          auto turn_off_light = [](LightState *light_state) {
+            if (light_state == nullptr)
+              return;
+            light_state->turn_on().set_effect("None").set_brightness(0.0f).perform();
+            light_state->turn_off().set_brightness(0.0f).perform();
+          };
+          turn_off_light(id(rgb_profile_strip));
+          turn_off_light(id(rgb_profile_fans));
+
+      - script.execute: apply_rgb_state
+
+  - id: apply_rgb_state
+    mode: restart
+    then:
+      - lambda: |-
+          using esphome::light::LightState;
+          LightState *active = nullptr;
+          LightState *strip = id(rgb_profile_strip);
+          LightState *fans = id(rgb_profile_fans);
+
+          if (id(cfg_rgb_profile).active_index() == 0) {
+            active = strip;
+            if (fans->get_effect_name() != "None") {
+              fans->turn_on().set_effect("none").set_brightness(0).perform();
+              fans->turn_off().set_brightness(0.0f).perform();
+            }
+          } else {
+            active = fans;
+            if (strip->get_effect_name() != "None") {
+              strip->turn_on().set_effect("none").set_brightness(0).perform();
+              strip->turn_off().set_brightness(0.0f).perform();
+            }
+          }
+
+          if (active == nullptr) {
+            id(rgb_is_on) = false;
+            id(rgb_current_brightness) = 0.0f;
+            return;
+          }
+
+          using std::isnan;
+          bool pm25_available = id(sensor_pm_2_5).has_state() && !isnan(id(sensor_pm_2_5).state);
+          bool show_boot_animation = !pm25_available && id(cfg_rgb_boot_animation).state;
+          const char *const effect_state = "PM2.5 State";
+          const char *const effect_boot = "PM2.5 Boot Sweep";
+
+          auto set_state = [&](float brightness, const char *effect, bool on) {
+            if (on) {
+              active->turn_on().set_effect(effect).set_brightness(brightness).perform();
+            } else {
+              active->turn_off().set_brightness(0.0f).perform();
+            }
+            id(rgb_is_on) = on;
+            id(rgb_current_brightness) = on ? brightness : 0.0f;
+          };
+
+          float brightness;
+          auto mode = id(ui_mode_select).state;
+          if (mode == "MANUAL") {
+            brightness = id(cfg_brightness_manual).state / 100.0f;
+          } else if (mode == "AUTO") {
+            auto td = id(cfg_auto_time_day).state_as_esptime();
+            auto tn = id(cfg_auto_time_night).state_as_esptime();
+            auto t = id(mysntp).now();
+
+            bool day_mode = true;
+            if (td.hour < tn.hour || (td.hour == tn.hour && td.minute < tn.minute)) {
+              day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) &&
+                         (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+            } else {
+              day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) ||
+                         (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+            }
+
+            brightness = (day_mode ? id(cfg_brightness_auto_day).state : id(cfg_brightness_auto_night).state) / 100.0f;
+          } else {
+            pm25_available = false;
+            show_boot_animation = false;
+            brightness = 0.0f;
+          }
+        
+          if (pm25_available) {
+            set_state(brightness, effect_state, true);
+          } else if (show_boot_animation) {
+            set_state(brightness, effect_boot, true);
+          } else {
+            set_state(0.0f, effect_state, false);
+          }
+
+interval:
+  - interval: 200ms
+    then:
+      - script.execute: apply_rgb_state

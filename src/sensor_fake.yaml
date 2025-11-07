@@ -1,10 +1,7 @@
-packages:
-  - !include _sensor_internal.yaml
-
 number:
   - platform: template
-    name: ${SENSOR_NAME_PM_1_0}
-    id: sensor_pm_1_0
+    name: "${SENSOR_NAME_PM_1_0} (fake)"
+    id: sensor_pm_1_0_fake
     device_id: device_sensor
     web_server:
       sorting_group_id: sorting_group_sensor
@@ -12,12 +9,19 @@ number:
     icon: "mdi:air-filter"
     optimistic: true
     min_value: 0.0
-    max_value: 50.0
+    max_value: 100.0
     initial_value: 4.0
     step: 0.5
+    on_value:
+      then:
+        - lambda: |-
+            id(sensor_pm_1_0_in).publish_state(x);
+            id(pm_sensor_active_source) = 3;
+        - script.execute: update_pm_data_outputs
+        - script.execute: update_air_quality_outputs
   - platform: template
-    name: ${SENSOR_NAME_PM_2_5}
-    id: sensor_pm_2_5
+    name: "${SENSOR_NAME_PM_2_5} (fake)"
+    id: sensor_pm_2_5_fake
     device_id: device_sensor
     web_server:
       sorting_group_id: sorting_group_sensor
@@ -25,12 +29,19 @@ number:
     icon: "mdi:air-filter"
     optimistic: true
     min_value: 0.0
-    max_value: 50.0
+    max_value: 100.0
     initial_value: 7.0
     step: 0.5
+    on_value:
+      then:
+        - lambda: |-
+            id(sensor_pm_2_5_in).publish_state(x);
+            id(pm_sensor_active_source) = 3;
+        - script.execute: update_pm_data_outputs
+        - script.execute: update_air_quality_outputs
   - platform: template
-    name: ${SENSOR_NAME_PM_10_0}
-    id: sensor_pm_10_0
+    name: "${SENSOR_NAME_PM_10_0} (fake)"
+    id: sensor_pm_10_0_fake
     device_id: device_sensor
     web_server:
       sorting_group_id: sorting_group_sensor
@@ -38,6 +49,39 @@ number:
     icon: "mdi:air-filter"
     optimistic: true
     min_value: 0.0
-    max_value: 50.0
+    max_value: 100.0
     initial_value: 11.0
     step: 0.5
+    update_interval: 10s
+    on_value:
+      then:
+        - lambda: |-
+            id(sensor_pm_10_0_in).publish_state(x);
+            id(pm_sensor_active_source) = 3;
+        - script.execute: update_pm_data_outputs
+        - script.execute: update_air_quality_outputs
+
+interval:
+  - interval: 2000ms
+    then:
+      - lambda: |-
+          static float val25 = 0.0;
+          val25 += 1.0;
+          if (val25 > 40.0) {
+            val25 = 0.0;
+          }
+          id(sensor_pm_2_5_fake).publish_state(val25);
+
+          static float val10 = 0.0;
+          val10 += 0.3;
+          if (val10 > 20.0) {
+            val10 = 0.0;
+          }
+          id(sensor_pm_10_0_fake).publish_state(val10);
+          
+          static float val1 = 0.0;
+          val1 += 0.2;
+          if (val1 > 10.0) {
+              val1 = 0.0;
+          }
+          id(sensor_pm_1_0_fake).publish_state(val1);

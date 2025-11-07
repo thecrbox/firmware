@@ -26,28 +26,53 @@ output:
 fan:
   - platform: speed
     id: fans_speed
-    restore_mode: NO_RESTORE
+    restore_mode: RESTORE_DEFAULT_OFF
     device_id: device_purifier
     speed_count: 100
     name: "Purifier Fan"
     output: fans_pwm
-    web_server:
-      sorting_group_id: sorting_group_purifier
-
-select:
-  - platform: template
-    name: "Purifier Mode"
-    id: purifier_mode
-    device_id: device_purifier
-    web_server:
-      sorting_group_id: sorting_group_purifier
-    optimistic: true
-    internal: false
-    restore_value: true
-    options:
-      - "OFF"
+    preset_modes:
       - "AUTO"
-      - "MANUAL"
+    web_server:
+      sorting_group_id: sorting_group_purifier
+    on_preset_set:
+      then:
+        - lambda: |-
+            if (x == "AUTO") {
+              ESP_LOGI("UI", "'fans_speed' preset=AUTO --> AUTO");
+              id(ui_mode_select).publish_state("AUTO");
+            } else {
+              if (id(fans_speed).state > 0) {
+                ESP_LOGI("UI", "'fans_speed' preset='%s' --> MANUAL", x.c_str());
+                id(ui_mode_select).publish_state("MANUAL");
+                id(cfg_fan_manual).publish_state(id(fans_speed).speed);
+              } else {
+                ESP_LOGI("UI", "'fans_speed' preset='%s' --> OFF", x.c_str());
+                id(ui_mode_select).publish_state("OFF");
+              }
+            }
+    on_speed_set:
+      - lambda: |-
+          if (id(fans_speed).state > 0 && id(ui_mode_select).state == "MANUAL") {
+            ESP_LOGI("UI", "'fans_speed' speed=%d (MANUAL)", x);
+            id(cfg_fan_manual).publish_state(x);
+          }
+    on_turn_on:
+      - lambda: |-
+          if (id(ui_mode_select).state == "OFF") {
+            ESP_LOGI("UI", "'fans_speed' turned ON, OFF --> MANUAL");
+            id(ui_mode_select).publish_state("MANUAL");
+          } else{
+            ESP_LOGI("UI", "'fans_speed' turned ON, %s (no op)", id(ui_mode_select).state.c_str());
+            //id(ui_mode_select).publish_state("MANUAL");
+          }
+    on_turn_off:
+      - lambda: |-
+          ESP_LOGI("UI", "'fans_speed' turned OFF");
+          id(ui_mode_select).publish_state("OFF");
+      
+
+
 
 packages:
   - !include _purifier_internal.yaml
@@ -237,7 +262,7 @@ number:
     icon: "mdi:fan"
     optimistic: true
     restore_value: true
-    min_value: 0.0
+    min_value: 1.0
     max_value: 100.0
     initial_value: 100
     step: 1.0

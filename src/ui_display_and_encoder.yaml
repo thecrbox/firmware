@@ -56,12 +56,6 @@ script:
             ESP_LOGD("UI", "ui_tick: ignoring, inputs locked");
             return;
           }
-
-          // Keep UI mode in sync with purifier mode unless setup screen is active
-          if (id(purifier_mode).state != id(ui_mode_select).state) {
-            ESP_LOGI("UI", "Syncing UI mode '%s' to purifier mode '%s'", id(ui_mode_select).state.c_str(), id(purifier_mode).state.c_str());
-            id(ui_mode_select).make_call().set_option(id(purifier_mode).state).perform();
-          }
           
           auto fn_idler_auto = []() {
             id(focus_auto_config).make_call().set_option("idle").perform();
@@ -433,7 +427,6 @@ select:
             if (!id(ui_inputs_locked)) {
               ESP_LOGI("UI", "ui_mode_select.on_value, ui_mode_select='%s'; i='%d'", id(ui_mode_select).state.c_str(), i);
               id(ui_display_mode_page).execute();
-              id(purifier_mode).make_call().set_option(id(ui_mode_select).state).perform();
             } else {
               ESP_LOGI("UI", "ui_mode_select.on_value: UI locked, deferring page update");
             }
@@ -646,8 +639,8 @@ display:
           const int x0 = ui::right_icon_x(0);
           const int x1 = ui::right_icon_x(1);
     
-          const int bright = id(all_fans_rgb).current_values.is_on()
-                           ? ui::clamp_pct((int) (id(all_fans_rgb).current_values.get_brightness() * 100.0f))
+          const int bright = id(rgb_is_on)
+                           ? ui::clamp_pct((int) (id(rgb_current_brightness) * 100.0f))
                            : 0;
           const int speed  = id(fans_speed).state ? ui::clamp_pct((int) id(fans_speed).speed) : 0;
     

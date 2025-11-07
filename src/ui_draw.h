@@ -223,7 +223,7 @@ namespace ui {
             it.printf(cx, ty + rout, font_title, COLOR_ON, TextAlign::BOTTOM_CENTER, "?");
         }
 
-        it.printf(cx, ty + rout + PADDING, font_title, COLOR_ON, TextAlign::TOP_CENTER, title);
+        it.printf(cx, ty + rout, font_title, COLOR_ON, TextAlign::TOP_CENTER, title);
     }
 
     inline void draw_gauge_title_left(esphome::display::Display &it,
@@ -251,7 +251,7 @@ namespace ui {
             it.printf(cx, ty + rout, font_title, COLOR_ON, TextAlign::BOTTOM_CENTER, "?");
         }
 
-        it.printf(cx - rout, ty + rout + PADDING, font_title, COLOR_ON, TextAlign::TOP_LEFT, title);
+        it.printf(cx - rout, ty + rout, font_title, COLOR_ON, TextAlign::TOP_LEFT, title);
     }
 
 // ================== Page headers (reusable) ==================
@@ -437,9 +437,12 @@ namespace ui {
         }
 
         if (focus == "aqi2") {
+            auto nowtime = id(mysntp).now();
+            it.printf(W, H, font_value, COLOR_ON, TextAlign::BOTTOM_RIGHT, "%02d:%02d", nowtime.hour, nowtime.minute);
+
             it.printf(0, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "AQI");
             std::string title = id(sensor_aqi_category).state;
-            draw_gauge_title_center(it, X_OFFSET_ICONS, ICON,
+            draw_gauge_title_left(it, X_OFFSET_ICONS, ICON,
                                     X_OFFSET_ICONS, X_OFFSET_ICONS - BAR_H,
                                     id(sensor_aqi_value).state, 500,
                                     title.c_str(),
@@ -468,6 +471,9 @@ namespace ui {
         }
 
         if (focus == "temp_and_humidity") {
+            auto nowtime = id(mysntp).now();
+            it.printf(W, H, font_value, COLOR_ON, TextAlign::BOTTOM_RIGHT, "%02d:%02d", nowtime.hour, nowtime.minute);
+
             const int x2 = right_icon_x(2);
             const int x3 = right_icon_x(3);
             std::string v1 = format_sensor_value(id(sensor_temperature_in).state, 0, "°C");
@@ -476,12 +482,15 @@ namespace ui {
             draw_icon_and_text(it, x3, Y_ICONS, &id(img_droplet),   font_small, v2.c_str());
             it.printf(x2 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "tem");
             it.printf(x3 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "hum");
-            std::string title = "AQI " + id(sensor_aqi_category).state;
+            std::string title = "" + id(sensor_aqi_category).state;
             it.printf(0, H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", title.c_str());
             return true;
         }
 
         if (focus == "pm_2_5") {
+            auto nowtime = id(mysntp).now();
+            it.printf(W, H, font_value, COLOR_ON, TextAlign::BOTTOM_RIGHT, "%02d:%02d", nowtime.hour, nowtime.minute);
+
             const int x2 = right_icon_x(2);
             const int x3 = right_icon_x(3);
             std::string v1 = format_sensor_value(id(sensor_pm_2_5_in).state);
@@ -490,12 +499,15 @@ namespace ui {
             draw_icon_and_text(it, x3, Y_ICONS, &id(img_wind),      font_small, v2.c_str());
             it.printf(x2 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "2.5");
             it.printf(x3 - X_OFFSET_ICONS/2, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "10");
-            std::string title = "AQI " + id(sensor_aqi_category).state;
+            std::string title = "" + id(sensor_aqi_category).state;
             it.printf(0, H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", title.c_str());
             return true;
         }
 
         if (focus == "nox") {
+            auto nowtime = id(mysntp).now();
+            it.printf(W, H, font_value, COLOR_ON, TextAlign::BOTTOM_RIGHT, "%02d:%02d", nowtime.hour, nowtime.minute);
+
             const int x2 = right_icon_x(2);
             const int x3 = right_icon_x(3);
             std::string v1 = format_sensor_value(id(sensor_nox_in).state);
@@ -504,7 +516,7 @@ namespace ui {
             draw_icon_and_text(it, x3, Y_ICONS, &id(img_gastube), font_small, v2.c_str());
             it.printf(x2 - X_OFFSET_ICONS/2-3, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "NOX");
             it.printf(x3 - X_OFFSET_ICONS/2-1, Y_ICONS, font_tiny, COLOR_ON, TextAlign::TOP_LEFT, "VOC");
-            std::string title = "AQI " + id(sensor_aqi_category).state;
+            std::string title = "" + id(sensor_aqi_category).state;
             it.printf(0, H, font_value, COLOR_ON, TextAlign::BOTTOM_LEFT, "%s", title.c_str());
             return true;
         }

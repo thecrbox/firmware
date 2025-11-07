@@ -8,7 +8,7 @@ wifi:
 #  ssid: !secret wifi_ssid
 #  password: !secret wifi_password
   fast_connect: false
-  power_save_mode: NONE
+  power_save_mode: none
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
@@ -22,6 +22,13 @@ wifi:
       - script.execute: wifi_on_connected
 
 captive_portal:
+
+esp32_ble:
+  id: myble
+  io_capability: none
+  disable_bt_logs: true  # Default, saves flash
+  #max_connections: 1  # Default, total BLE connections
+  enable_on_boot: true
 
 esp32_improv:
   id: myimprov
@@ -44,7 +51,7 @@ ota:
 web_server:
   port: 80
   version: 3
-  local: true
+  local: false
   id: mywebserver
 #  auth:
 #    username:  !secret webserver_user
@@ -153,6 +160,8 @@ script:
       - logger.log:
           level: INFO
           format: "Network: wifi_on_connected"
+      - lambda: |-
+          id(myble).disable();
       - if:
           condition:
             lambda: 'return id(network_hotspot_active);'
@@ -162,7 +171,7 @@ script:
             - logger.log:
                 level: INFO
                 format: "Network: hotspot was not active, no restart needed"
-      - script.execute: network_refresh_timezone
+#      - script.execute: network_refresh_timezone
 
   - id: network_refresh_timezone
     mode: restart

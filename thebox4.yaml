@@ -1,6 +1,6 @@
 substitutions:
-  device_name: "box2-0003"
-  device_setup_ssid: "box2-0003"
+  device_name: "box2-0004"
+  device_setup_ssid: "box2-0004"
   device_setup_password: "12345678"
   # depending on the display version, we may want to override that
   UI_DISPLAY_TYPE: "SH1106 128x64"
@@ -35,25 +35,21 @@ packages:
   - !include src/purifier.yaml
   - !include src/ui_common.yaml
   - !include src/ui_display_and_encoder.yaml
+  - !include src/ui_rgb.yaml
 
-  # for now only one RGB mo at a time is supported, choose:
-  #- !include thebox2/ui_rgb_fans.yaml
-  - !include src/ui_rgb_strips.yaml
-
-  # for now only one environmental sensor at a time is supported, choose:
-  #- !include thebox/sensor_pmsx0003.yaml
-  #- !include thebox/sensor_fake.yaml
-  - !include src/sensor_sen5x.yaml
-
-
+  - !include src/_sensor_internal.yaml
+#  - !include src/sensor_pmsx0003.yaml
+#  - !include src/sensor_sen5x.yaml
+  - !include src/sensor_fake.yaml
 
 logger:
   level: INFO
-  baud_rate: 115200
-  logs:
-    # main: DEBUG
-    wifi: NONE
-    esp-idf: NONE
+  tx_buffer_size: 160
+#  baud_rate: 0
+#  logs:
+#    # main: DEBUG
+#    wifi: NONE
+#    esp-idf: NONE
 
 preferences:
   # TODO: consider increasing further after we're done with development

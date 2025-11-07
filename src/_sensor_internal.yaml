@@ -26,7 +26,22 @@ esphome:
           id(sensor_nox_in).publish_state(no_data);
           id(sensor_temperature_in).publish_state(no_data);
           id(sensor_humidity_in).publish_state(no_data);
+          id(sensor_pm_1_0).publish_state(no_data);
+          id(sensor_pm_2_5).publish_state(no_data);
+          id(sensor_pm_4_0).publish_state(no_data);
+          id(sensor_pm_10_0).publish_state(no_data);
+          id(sensor_voc).publish_state(no_data);
+          id(sensor_nox).publish_state(no_data);
+          id(sensor_temperature).publish_state(no_data);
+          id(sensor_humidity).publish_state(no_data);
+      - script.execute: update_pm_data_outputs
       - script.execute: update_air_quality_outputs
+
+globals:
+  - id: pm_sensor_active_source
+    type: uint8_t
+    restore_value: true
+    initial_value: '0'
 
 web_server:
   sorting_groups:
@@ -75,6 +90,105 @@ sensor:
     id: sensor_humidity_in
     internal: true
     update_interval: never
+
+# --- Aggregated public sensors ---
+  - platform: template
+    name: ${SENSOR_NAME_PM_1_0}
+    id: sensor_pm_1_0
+    unit_of_measurement: "µg/m³"
+    accuracy_decimals: 1
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    update_interval: never
+    state_class: measurement
+    lambda: return NAN;
+
+  - platform: template
+    name: ${SENSOR_NAME_PM_2_5}
+    id: sensor_pm_2_5
+    unit_of_measurement: "µg/m³"
+    accuracy_decimals: 1
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    update_interval: never
+    state_class: measurement
+    lambda: return NAN;
+
+  - platform: template
+    name: ${SENSOR_NAME_PM_4_0}
+    id: sensor_pm_4_0
+    unit_of_measurement: "µg/m³"
+    accuracy_decimals: 1
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    update_interval: never
+    state_class: measurement
+    lambda: return NAN;
+
+  - platform: template
+    name: ${SENSOR_NAME_PM_10_0}
+    id: sensor_pm_10_0
+    unit_of_measurement: "µg/m³"
+    accuracy_decimals: 1
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    update_interval: never
+    state_class: measurement
+    lambda: return NAN;
+
+  - platform: template
+    name: ${SENSOR_NAME_VOC}
+    id: sensor_voc
+    unit_of_measurement: "ppb"
+    accuracy_decimals: 0
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    update_interval: never
+    state_class: measurement
+    lambda: return NAN;
+
+  - platform: template
+    name: ${SENSOR_NAME_NOX}
+    id: sensor_nox
+    unit_of_measurement: "ppb"
+    accuracy_decimals: 0
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    update_interval: never
+    state_class: measurement
+    lambda: return NAN;
+
+  - platform: template
+    name: ${SENSOR_NAME_TEMPERATURE}
+    id: sensor_temperature
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    device_class: temperature
+    state_class: measurement
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    update_interval: never
+    lambda: return NAN;
+
+  - platform: template
+    name: ${SENSOR_NAME_HUMIDITY}
+    id: sensor_humidity
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    device_class: humidity
+    state_class: measurement
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    update_interval: never
+    lambda: return NAN;
 
   - platform: template
     name: "AQI (combined)"
@@ -169,7 +283,47 @@ text_sensor:
       if (aqi <= 300.0f)   return {"Extreme"};
       return {"Hazardous"};
 
+  - platform: template
+    id: sensor_pm_source
+    name: "PM sensor source"
+    icon: mdi:connection
+    update_interval: never
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    lambda: return {"auto"};
+
 script:
+  - id: update_pm_data_outputs
+    mode: restart
+    then:
+      - lambda: |-
+          auto publish_if_changed = [](esphome::sensor::Sensor *input, esphome::sensor::Sensor *output) {
+            const float value = input->state;
+            if (!output->has_state() || output->state != value) {
+              output->publish_state(value);
+            }
+          };
+
+          publish_if_changed(id(sensor_pm_1_0_in), id(sensor_pm_1_0));
+          publish_if_changed(id(sensor_pm_2_5_in), id(sensor_pm_2_5));
+          publish_if_changed(id(sensor_pm_4_0_in), id(sensor_pm_4_0));
+          publish_if_changed(id(sensor_pm_10_0_in), id(sensor_pm_10_0));
+          publish_if_changed(id(sensor_voc_in), id(sensor_voc));
+          publish_if_changed(id(sensor_nox_in), id(sensor_nox));
+          publish_if_changed(id(sensor_temperature_in), id(sensor_temperature));
+          publish_if_changed(id(sensor_humidity_in), id(sensor_humidity));
+
+          const uint8_t source = id(pm_sensor_active_source);
+          const char *label = "auto";
+          switch (source) {
+            case 1: label = "PMSX003"; break;
+            case 2: label = "Sensirion SEN5x"; break;
+            case 3: label = "Manual override"; break;
+            default: label = "auto"; break;
+          }
+          id(sensor_pm_source).publish_state(label);
+
   - id: update_air_quality_outputs
     mode: restart
     then:

@@ -21,7 +21,7 @@ protected:
     float boost_proportional;
     float boosted_fan_speed;
     std::chrono::steady_clock::time_point prev_calculation_timestamp;
-    PID() : warmup(/*60*/5), pm25f_prev(0), boost_derivative(0), boost_integral(0), boost_proportional(0), boosted_fan_speed(0) {
+    PID() : warmup(5), pm25f_prev(0), boost_derivative(0), boost_integral(0), boost_proportional(0), boosted_fan_speed(0) {
 
     }
 
@@ -46,9 +46,10 @@ public:
     }
 
     float GetFanSpeed() {
-        if (id(purifier_mode).state == "MANUAL") {
+        auto fan_mode = id(ui_mode_select).state;
+        if (fan_mode == "MANUAL") {
             return ((float)id(cfg_fan_manual).state);
-        } else if (id(purifier_mode).state == "AUTO") {
+        } else if (fan_mode == "AUTO") {
             return boosted_fan_speed;
         } else {
             return 0;
@@ -156,17 +157,27 @@ public:
     void Control() {
         if (!IsWarm()) {
             float fan_min = id(cfg_fan_lvl_min).state;
-            id(fans_speed).turn_on().set_speed(30).perform();
+            ESP_LOGD("main", "Control, speed=idle (warmup)");
+            id(fans_speed).speed = 30;
+            if (id(fans_speed).preset_mode != id(ui_mode_select).state) {
+                id(fans_speed).turn_on().set_preset_mode(id(ui_mode_select).state).perform();
+            }
             return;
         }
 
         auto speed = GetFanSpeed();
         if (speed <= 0.0) {
-            ESP_LOGD("main", "Control, speed=OFF", speed);
+            ESP_LOGD("main", "Control, speed=OFF");
             id(fans_speed).turn_off().set_speed(0).perform();
         } else {
-            ESP_LOGD("main", "Control, speed=%f", speed);
-            id(fans_speed).turn_on().set_speed(speed).perform();
+            if (id(ui_mode_select).state == "AUTO") {
+                ESP_LOGD("main", "Control, speed=%f (auto)", speed);
+                id(fans_speed).speed = speed;
+                id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
+            } else {
+                ESP_LOGD("main", "Control, speed=%f (manual)", speed);
+                id(fans_speed).turn_on().set_speed(speed).perform();
+            }
         }
     }
 };

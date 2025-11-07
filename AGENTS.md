@@ -10,9 +10,10 @@
    ```
 3. When compiling, PlatformIO may need to download ESP-IDF toolchains. Behind the proxy this can require patience; rerun the command if transient HTTP 403 errors appear.
 
-#Workflo
+# Workflow
 
-Use `esphome compile ./thebox.yaml` often to check your intermediate work results.
-Use `esphome config ./thebox.yaml` even more ofthen to check intermediate work results.
+Use `esphome compile ./thebox4.yaml` often to check your intermediate work results.
+Use `esphome config ./thebox4.yaml` even more ofthen to check intermediate work results.
+Use `esphome run ./thebox4.yaml --device box2-0004.local` to flash a real device; note: logs will become visible 20s after flashing; whole compilation+flashing takes at least 1 minute
 
 Do NOT spawn new components or features, if there are simillar ones available on esphome official docs. 

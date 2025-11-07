@@ -1,6 +1,3 @@
-packages:
-  - !include _sensor_internal.yaml
-
 uart:
   tx_pin: ${SENSOR_UART_TX}
   rx_pin: ${SENSOR_UART_RX}
@@ -18,9 +15,10 @@ sensor:
     type: PMSX003
     update_interval: ${SENSOR_UPDATE_INTERVAL}
     pm_1_0:
-      name: ${SENSOR_NAME_PM_1_0}
-      id: sensor_pm_1_0
+      name: "${SENSOR_NAME_PM_1_0} (PMSX003)"
+      id: sensor_pm_1_0_pms
       device_id: device_sensor
+      internal: true
       accuracy_decimals: 1
       web_server:
         sorting_group_id: sorting_group_sensor
@@ -31,12 +29,16 @@ sensor:
         - skip_initial: 3
       on_raw_value:
         then:
-          - lambda: id(sensor_pm_1_0_in).publish_state(x);
+          - lambda: |-
+              id(sensor_pm_1_0_in).publish_state(x);
+              id(pm_sensor_active_source) = 3;
+          - script.execute: update_pm_data_outputs
           - script.execute: update_air_quality_outputs
     pm_2_5:
-      name: ${SENSOR_NAME_PM_2_5}
-      id: sensor_pm_2_5
+      name: "${SENSOR_NAME_PM_2_5} (PMSX003)"
+      id: sensor_pm_2_5_pms
       device_id: device_sensor
+      internal: true
       accuracy_decimals: 1
       web_server:
         sorting_group_id: sorting_group_sensor
@@ -47,12 +49,16 @@ sensor:
         - skip_initial: 3
       on_raw_value:
         then:
-          - lambda: id(sensor_pm_2_5_in).publish_state(x);
+          - lambda: |-
+              id(sensor_pm_2_5_in).publish_state(x);
+              id(pm_sensor_active_source) = 3;
+          - script.execute: update_pm_data_outputs
           - script.execute: update_air_quality_outputs
     pm_10_0:
-      name: ${SENSOR_NAME_PM_10_0}
-      id: sensor_pm_10_0
+      name: "${SENSOR_NAME_PM_10_0} (PMSX003)"
+      id: sensor_pm_10_0_pms
       device_id: device_sensor
+      internal: true
       accuracy_decimals: 1
       web_server:
         sorting_group_id: sorting_group_sensor
@@ -63,5 +69,8 @@ sensor:
         - skip_initial: 3
       on_raw_value:
         then:
-          - lambda: id(sensor_pm_10_0_in).publish_state(x);
+          - lambda: |-
+              id(sensor_pm_10_0_in).publish_state(x);
+              id(pm_sensor_active_source) = 3;
+          - script.execute: update_pm_data_outputs
           - script.execute: update_air_quality_outputs

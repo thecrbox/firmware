@@ -1,7 +1,7 @@
 esphome:
   includes:
-    - src/ui_rgb_pm25fx_common.h
-    - src/ui_rgb_pm25fx_profiles.h
+    - src/ui_rgb_aqifx_common.h
+    - src/ui_rgb_aqifx_profiles.h
   on_boot:
     priority: -50
     then:
@@ -176,18 +176,18 @@ light:
         to: 29
     effects:
       - addressable_lambda:
-          name: "PM2.5 Boot Sweep"
+          name: "AQI Boot Sweep"
           update_interval: 150ms
           lambda: |-
             float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
-            thebox_light_effects::pm25_boot_sweep_strip(it, speed);
+            thebox_light_effects::aqi_boot_sweep_strip(it, speed);
       - addressable_lambda:
-          name: "PM2.5 State"
+          name: "AQI State"
           update_interval: 33ms
           lambda: |-
-            float pm25 = id(sensor_pm_2_5).state;
+            float aqi = id(sensor_aqi_value).state;
             float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
-            thebox_light_effects::pm25_state_strip(it, pm25, speed);
+            thebox_light_effects::aqi_state_strip(it, aqi, speed);
 
   - platform: partition
     default_transition_length: 0s
@@ -213,18 +213,18 @@ light:
         to: 7
     effects:
       - addressable_lambda:
-          name: "PM2.5 Boot Sweep"
+          name: "AQI Boot Sweep"
           update_interval: 150ms
           lambda: |-
             float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
-            thebox_light_effects::pm25_boot_sweep_fans(it, speed);
+            thebox_light_effects::aqi_boot_sweep_fans(it, speed);
       - addressable_lambda:
-          name: "PM2.5 State"
+          name: "AQI State"
           update_interval: 33ms
           lambda: |-
-            float pm25 = id(sensor_pm_2_5).state;
+            float aqi = id(sensor_aqi_value).state;
             float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
-            thebox_light_effects::pm25_state_fans(it, pm25, speed);
+            thebox_light_effects::aqi_state_fans(it, aqi, speed);
 
 script:
   - id: sync_rgb_profile_select
@@ -271,10 +271,10 @@ script:
           }
 
           using std::isnan;
-          bool pm25_available = id(sensor_pm_2_5).has_state() && !isnan(id(sensor_pm_2_5).state);
-          bool show_boot_animation = !pm25_available && id(cfg_rgb_boot_animation).state;
-          const char *const effect_state = "PM2.5 State";
-          const char *const effect_boot = "PM2.5 Boot Sweep";
+          bool aqi_available = id(sensor_aqi_value).has_state() && !isnan(id(sensor_aqi_value).state);
+          bool show_boot_animation = !aqi_available && id(cfg_rgb_boot_animation).state;
+          const char *const effect_state = "AQI State";
+          const char *const effect_boot = "AQI Boot Sweep";
 
           auto set_state = [&](float brightness, const char *effect, bool on) {
             if (on) {
@@ -306,12 +306,12 @@ script:
 
             brightness = (day_mode ? id(cfg_brightness_auto_day).state : id(cfg_brightness_auto_night).state) / 100.0f;
           } else {
-            pm25_available = false;
+            aqi_available = false;
             show_boot_animation = false;
             brightness = 0.0f;
           }
         
-          if (pm25_available) {
+          if (aqi_available) {
             set_state(brightness, effect_state, true);
           } else if (show_boot_animation) {
             set_state(brightness, effect_boot, true);

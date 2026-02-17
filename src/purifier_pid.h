@@ -14,6 +14,8 @@
 
 class PID {
 protected:
+    bool transition = true;
+
     float aqi_prev;
     float boost_derivative;
     float boost_integral;
@@ -28,6 +30,9 @@ protected:
         return millis() > (WARMUP_DURATION_S * 1000);
     }
 
+    void SetTransition(bool value) {
+        transition = value;
+    }
 
 public:
     static PID& Instance() {
@@ -35,12 +40,23 @@ public:
         return instance;
     }
 
+    bool IsTransition() {
+        return transition;
+    }
+
+    bool ClearTransition() {
+        bool was_transition = transition;
+        transition = false;
+        return was_transition;
+    }
+
     float GetFanSpeed() {
         auto fan_mode = id(ui_mode_select).current_option();
         if (fan_mode == "MANUAL") {
-            return ((float)id(cfg_fan_manual).state);
+            auto manual_fan_speed = id(cfg_fan_manual).state;
+            return manual_fan_speed > 0 ? manual_fan_speed : 2.0f;
         } else if (fan_mode == "AUTO") {
-            return boosted_fan_speed;
+            return boosted_fan_speed > 0 ? boosted_fan_speed : 2.0f;
         } else {
             return 0;
         }
@@ -157,21 +173,27 @@ public:
 
         auto speed = GetFanSpeed();
         if (speed <= 0.0) {
-            ESP_LOGD("main", "Control, speed=OFF");
+            ESP_LOGI("main", "Control, speed=OFF");
             if (id(fans_speed).state) { // Only turn off if it's currently on
                 id(fans_speed).turn_off().perform();
             }
         } else {
             if (id(ui_mode_select).current_option() == "AUTO") {
-                ESP_LOGD("main", "Control, speed=%f (auto)", speed);
-                // Only set preset if it's not already AUTO.
+                id(fans_speed).state = true;
+
                 if (id(fans_speed).get_preset_mode() != "AUTO") {
-                    id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
+                    ESP_LOGI("main", "Control, speed=%f (AUTO starting...)", speed);
+                    SetTransition(true);
+                    id(fans_speed).speed = speed;
+                    id(fans_speed).make_call().set_preset_mode("AUTO").perform();
+                } else {
+                    ESP_LOGI("main", "Control, speed=%f (AUTO continued)", speed);
+                    SetTransition(true);
+                    id(fans_speed).speed = speed;
+                    id(fans_speed).publish_state();
                 }
-                // Set speed, as preset_mode might not fully control it or for consistency.
-                id(fans_speed).turn_on().set_speed(speed).perform();
             } else { // ui_mode_select is "MANUAL"
-                ESP_LOGD("main", "Control, speed=%f (manual)", speed);
+                ESP_LOGI("main", "Control, speed=%f (manual)", speed);
                 // Set speed directly. This implicitly clears any preset.
                 id(fans_speed).turn_on().set_speed(speed).perform();
             }

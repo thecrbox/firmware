@@ -150,26 +150,30 @@ public:
 
     void Control() {
         if (!IsWarm()) {
-            float fan_min = id(cfg_fan_lvl_min).state;
             ESP_LOGD("main", "Control, speed=idle (warmup)");
             id(fans_speed).turn_on().set_speed(30).perform();
-            if (id(fans_speed).get_preset_mode() != id(ui_mode_select).current_option()) {
-                id(fans_speed).turn_on().set_preset_mode(id(ui_mode_select).current_option()).perform();
-            }
             return;
         }
 
         auto speed = GetFanSpeed();
         if (speed <= 0.0) {
             ESP_LOGD("main", "Control, speed=OFF");
-            id(fans_speed).turn_off().set_speed(0).perform();
+            if (id(fans_speed).state) { // Only turn off if it's currently on
+                id(fans_speed).turn_off().perform();
+            }
         } else {
             if (id(ui_mode_select).current_option() == "AUTO") {
                 ESP_LOGD("main", "Control, speed=%f (auto)", speed);
-                id(fans_speed).turn_on().set_speed(speed).perform();
-                id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
-            } else {
+                // Only set preset if it's not already AUTO.
+                if (id(fans_speed).get_preset_mode() != "AUTO") {
+                    id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
+                }
+                // ESPHome fan component's set_preset_mode("AUTO") should manage speed internally.
+                // Calling set_speed here might implicitly clear the preset.
+                // If the fan doesn't turn on or speed isn't set, we'll re-evaluate.
+            } else { // ui_mode_select is "MANUAL"
                 ESP_LOGD("main", "Control, speed=%f (manual)", speed);
+                // Set speed directly. This implicitly clears any preset.
                 id(fans_speed).turn_on().set_speed(speed).perform();
             }
         }

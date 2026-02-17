@@ -39,37 +39,42 @@ fan:
       then:
         - lambda: |-
             if (x == "AUTO") {
-              ESP_LOGI("UI", "'fans_speed' preset=AUTO --> AUTO");
-              id(ui_mode_select).publish_state("AUTO");
-            } else {
-              if (id(fans_speed).state > 0) {
-                ESP_LOGI("UI", "'fans_speed' preset='%s' --> MANUAL", x.c_str());
+              ESP_LOGI("UI", "'fans_speed' preset=AUTO --> UI AUTO");
+              if (id(ui_mode_select).current_option() != "AUTO") {
+                id(ui_mode_select).publish_state("AUTO");
+              }
+            } else { // This covers x == "" (preset cleared) and invalid presets
+              ESP_LOGI("UI", "'fans_speed' preset='%s' --> UI MANUAL (preset cleared or invalid)", x.c_str());
+              if (id(ui_mode_select).current_option() != "MANUAL") {
                 id(ui_mode_select).publish_state("MANUAL");
-                id(cfg_fan_manual).publish_state(id(fans_speed).speed);
-              } else {
-                ESP_LOGI("UI", "'fans_speed' preset='%s' --> OFF", x.c_str());
-                id(ui_mode_select).publish_state("OFF");
               }
             }
     on_speed_set:
       - lambda: |-
-          if (id(fans_speed).speed > 0 && id(ui_mode_select).current_option() == "MANUAL") {
-            ESP_LOGI("UI", "'fans_speed' speed=%d (MANUAL)", x);
-            id(cfg_fan_manual).publish_state(x);
+          if (!id(fans_speed).state) { // If fan is off, ignore speed changes
+            ESP_LOGD("UI", "'fans_speed' on_speed_set ignored, fan is OFF");
+            return;
           }
+          // If speed is set directly, it implies manual control.
+          // This should override any active preset and set UI mode to MANUAL.
+          // Do NOT call set_preset_mode("") here. Setting speed directly should implicitly clear it.
+          // If we call set_preset_mode(""), it will trigger on_preset_set, causing a loop.
+          if (id(ui_mode_select).current_option() != "MANUAL") {
+            ESP_LOGI("UI", "'fans_speed' speed set directly --> UI MANUAL");
+            id(ui_mode_select).publish_state("MANUAL");
+          }
+          id(cfg_fan_manual).publish_state(x); // Always update manual fan config
     on_turn_on:
       - lambda: |-
-          if (id(ui_mode_select).current_option() == "OFF") {
-            ESP_LOGI("UI", "'fans_speed' turned ON, OFF --> MANUAL");
-            id(ui_mode_select).publish_state("MANUAL");
-          } else{
-            ESP_LOGI("UI", "'fans_speed' turned ON, %s (no op)", id(ui_mode_select).current_option().c_str());
-            //id(ui_mode_select).publish_state("MANUAL");
-          }
+          ESP_LOGI("UI", "'fans_speed' turned ON");
+          // Do not update ui_mode_select here. Let on_preset_set or on_speed_set handle it.
+          // This avoids the transient state issue.
     on_turn_off:
       - lambda: |-
-          ESP_LOGI("UI", "'fans_speed' turned OFF");
-          id(ui_mode_select).publish_state("OFF");
+          ESP_LOGI("UI", "'fans_speed' turned OFF --> UI OFF");
+          if (id(ui_mode_select).current_option() != "OFF") {
+            id(ui_mode_select).publish_state("OFF");
+          }
       
 
 

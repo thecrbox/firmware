@@ -29,22 +29,22 @@ web_server:
 
 packages:
   locked_cfg_boost_proportional_jump: !include { file: thebox_guarded_number.yaml, vars: {
-    name: "AUTO: Coef proportional %m³/µg",
+    name: "AUTO: Coef proportional",
     id: cfg_boost_proportional_jump,
     unlocker: unlock_purifier_config_auto_advanced,
-    min: 2.0, max: 4.0, step: 0.1, initial: "3.2f",
+    min: 0.1, max: 1.0, step: 0.05, initial: "0.3f",
     group: sorting_group_purifier_config_auto_advanced, weight: 10, device_id: device_purifier } }
   locked_cfg_boost_derivative_jump: !include { file: thebox_guarded_number.yaml, vars: {
-    name: "AUTO: Coef derivative %m³/µg",
+    name: "AUTO: Coef derivative",
     id: cfg_boost_derivative_jump,
     unlocker: unlock_purifier_config_auto_advanced,
-    min: 2.0, max: 5.0, step: 0.1, initial: "3.0f",
+    min: 0.1, max: 1.0, step: 0.05, initial: "0.3f",
     group: sorting_group_purifier_config_auto_advanced, weight: 11, device_id: device_purifier } }
   locked_cfg_boost_integral_jump: !include { file: thebox_guarded_number.yaml, vars: {
-    name: "AUTO: Coef integral %m³/µg",
+    name: "AUTO: Coef integral",
     id: cfg_boost_integral_jump,
     unlocker: unlock_purifier_config_auto_advanced,
-    min: 0.010, max: 0.070, step: 0.001, initial: "0.020f",
+    min: 0.001, max: 0.01, step: 0.0005, initial: "0.002f",
     group: sorting_group_purifier_config_auto_advanced, weight: 12, device_id: device_purifier } }
   locked_cfg_boost_derivative_decay: !include { file: thebox_guarded_number.yaml, vars: {
     name: "AUTO: Decay derivative %/s",
@@ -58,9 +58,9 @@ packages:
     unlocker: unlock_purifier_config_auto_advanced,
     min: 0.000, max: 0.050, step: 0.001, initial: "0.015f",
     group: sorting_group_purifier_config_auto_advanced, weight: 14, device_id: device_purifier } }
-  locked_cfg_pm25_deadband: !include { file: thebox_guarded_number.yaml, vars: {
-    name: "AUTO: PM2.5 deadband",
-    id: cfg_pm25_deadband,
+  locked_cfg_aqi_deadband: !include { file: thebox_guarded_number.yaml, vars: {
+    name: "AUTO: AQI deadband",
+    id: cfg_aqi_deadband,
     unlocker: unlock_purifier_config_auto_advanced,
-    min: 0.0, max: 10.0, step: 0.5, initial: "2.0f",
+    min: 0.0, max: 50.0, step: 1, initial: "5",
     group: sorting_group_purifier_config_auto_advanced, weight: 15, device_id: device_purifier } }

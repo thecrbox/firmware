@@ -13,7 +13,8 @@
 # Source code
 
 Use `.yml` files in current dir and contents of ./src/ dir
-Ignore `.esphome`, `.git`, `.idea`; always exclude them
+Ignore `.git`, `.idea`; always exclude them
+Go to `.esphome` only to check current upstream implementation; when you need to figure out the impl of a class there is no project source code there, only upstream code
 
 # Workflow
 

@@ -14,13 +14,13 @@
 
 class PID {
 protected:
-    float pm25f_prev;
+    float aqi_prev;
     float boost_derivative;
     float boost_integral;
     float boost_proportional;
     float boosted_fan_speed;
     std::chrono::steady_clock::time_point prev_calculation_timestamp;
-    PID() : pm25f_prev(0), boost_derivative(0), boost_integral(0), boost_proportional(0), boosted_fan_speed(0) {
+    PID() : aqi_prev(0), boost_derivative(0), boost_integral(0), boost_proportional(0), boosted_fan_speed(0) {
 
     }
 
@@ -51,15 +51,15 @@ public:
         const std::chrono::duration<double> elapsed_seconds{now - prev_calculation_timestamp};
         float time = elapsed_seconds.count();
 
-        const bool pm_ready = id(sensor_pm_2_5).has_state() && !std::isnan(id(sensor_pm_2_5).state);
+        const bool aqi_ready = id(sensor_aqi_value).has_state() && !std::isnan(id(sensor_aqi_value).state);
 
         if (!IsWarm()) {
             prev_calculation_timestamp = now;
             return;
         }
 
-        if (!pm_ready) {
-            ESP_LOGD("main", "PID::Calculate skipped - PM2.5 sensor not ready");
+        if (!aqi_ready) {
+            ESP_LOGD("main", "PID::Calculate skipped - AQI sensor not ready");
             prev_calculation_timestamp = now;
             return;
         }
@@ -97,10 +97,10 @@ public:
         float boost_integral_decay = id(cfg_boost_integral_decay).state;
         float boost_proportional_jump = id(cfg_boost_proportional_jump).state;
 
-        float pm25f_curr = id(sensor_pm_2_5).state;
-        float pm25f_target_delta = (float)id(diag_auto_target_delta).state;
-        float pm25f_deadband = (float)id(cfg_pm25_deadband).state;
-        float delta = pm25f_curr - pm25f_prev;
+        float aqi_curr = id(sensor_aqi_value).state;
+        float aqi_target_delta = (float)id(diag_auto_target_delta).state;
+        float aqi_deadband = (float)id(cfg_aqi_deadband).state;
+        float delta = aqi_curr - aqi_prev;
 
         if (!time_valid) {
             ESP_LOGD("main", "PID::Calculate running without valid time - assuming day mode");
@@ -116,16 +116,16 @@ public:
                 boost_derivative -= time * boost_derivative_decay;
             }
 
-            if (pm25f_target_delta > pm25f_deadband) {
+            if (aqi_target_delta > aqi_deadband) {
                 // serious error, boost_integral needed
-                boost_integral += time * pm25f_target_delta * boost_integral_jump;
+                boost_integral += time * aqi_target_delta * boost_integral_jump;
             } else {
                 // small error, boost_integral should decay
                 boost_integral -= time * boost_integral_decay;
             }
 
             // always needed, boost_proportional
-            boost_proportional = pm25f_target_delta * boost_proportional_jump;
+            boost_proportional = aqi_target_delta * boost_proportional_jump;
 
             // clamp boosts
             boost_proportional = std::clamp(boost_proportional, 0.0f, 100.0f);
@@ -138,7 +138,7 @@ public:
         boosted_fan_speed = std::clamp(boosted_fan_speed, 0.0f, fan_max);
 
         // move forward
-        pm25f_prev = pm25f_curr;
+        aqi_prev = aqi_curr;
         prev_calculation_timestamp = now;
 
         id(diag_fan_speed_auto).publish_state(boosted_fan_speed);

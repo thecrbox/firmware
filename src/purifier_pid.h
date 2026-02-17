@@ -168,9 +168,8 @@ public:
                 if (id(fans_speed).get_preset_mode() != "AUTO") {
                     id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
                 }
-                // ESPHome fan component's set_preset_mode("AUTO") should manage speed internally.
-                // Calling set_speed here might implicitly clear the preset.
-                // If the fan doesn't turn on or speed isn't set, we'll re-evaluate.
+                // Set speed, as preset_mode might not fully control it or for consistency.
+                id(fans_speed).turn_on().set_speed(speed).perform();
             } else { // ui_mode_select is "MANUAL"
                 ESP_LOGD("main", "Control, speed=%f (manual)", speed);
                 // Set speed directly. This implicitly clears any preset.

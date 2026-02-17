@@ -14,30 +14,20 @@
 
 class PID {
 protected:
-    int warmup;
     float pm25f_prev;
     float boost_derivative;
     float boost_integral;
     float boost_proportional;
     float boosted_fan_speed;
     std::chrono::steady_clock::time_point prev_calculation_timestamp;
-    PID() : warmup(5), pm25f_prev(0), boost_derivative(0), boost_integral(0), boost_proportional(0), boosted_fan_speed(0) {
+    PID() : pm25f_prev(0), boost_derivative(0), boost_integral(0), boost_proportional(0), boosted_fan_speed(0) {
 
     }
 
     bool IsWarm() {
-        return warmup <= 0;
+        return millis() > (WARMUP_DURATION_S * 1000);
     }
 
-    void MakeWarmer() {
-        if (warmup > 0) {
-            warmup--;
-            if (warmup == 0) {
-                ESP_LOGI("main", "PID is now warm, will start controlling the fan");
-            }
-            prev_calculation_timestamp = std::chrono::steady_clock::now();
-        }
-    }
 
 public:
     static PID& Instance() {
@@ -63,7 +53,11 @@ public:
 
         const bool pm_ready = id(sensor_pm_2_5).has_state() && !std::isnan(id(sensor_pm_2_5).state);
 
-        MakeWarmer();
+        if (!IsWarm()) {
+            prev_calculation_timestamp = now;
+            return;
+        }
+
         if (!pm_ready) {
             ESP_LOGD("main", "PID::Calculate skipped - PM2.5 sensor not ready");
             prev_calculation_timestamp = now;

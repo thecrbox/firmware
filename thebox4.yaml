@@ -20,6 +20,7 @@ esphome:
   platformio_options:
     build_flags:
       - "-DUSE_DISPLAY_QR_CODE"
+      - "-DWARMUP_DURATION_S=${WARMUP_DURATION_S}"
 
   includes:
     - src/purifier_pid.h

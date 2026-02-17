@@ -20,9 +20,11 @@ esphome:
   platformio_options:
     build_flags:
       - "-DUSE_DISPLAY_QR_CODE"
+      - "-DWARMUP_DURATION_S=${WARMUP_DURATION_S}"
 
   includes:
     - src/purifier_pid.h
+    - src/aqi_calculator.h
 
 external_components:
   - source:
@@ -44,11 +46,12 @@ packages:
 
 logger:
   level: INFO
+  tx_buffer_size: 160
   baud_rate: 0
-  logs:
-    # main: DEBUG
-    wifi: NONE
-    esp-idf: NONE
+#  logs:
+#    # main: DEBUG
+#    wifi: NONE
+#    esp-idf: NONE
 
 preferences:
   # TODO: consider increasing further after we're done with development

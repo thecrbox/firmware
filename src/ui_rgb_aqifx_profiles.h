@@ -55,7 +55,8 @@ inline void aqi_boot_sweep_strip(esphome::light::AddressableLight &it, float fan
   const float kGreenThresh = 40.0f;
 
   static int step = -1;
-  step++;
+  static float delta_f = ((float)kMaxAqi)*0.05f/(WARMUP_DURATION_S/2);
+  step = round((float)step + delta_f);
 
   const int period = static_cast<int>(2 * kMaxAqi);
   int t = step % period;
@@ -90,7 +91,7 @@ inline void aqi_boot_sweep_fans(esphome::light::AddressableLight &it, float fanl
   const float kGreenThresh = 40.0f;
 
   static int step = -1;
-  step++;
+  step += 9;
 
   const int period = static_cast<int>(2 * kMaxAqi);
   int t = step % period;

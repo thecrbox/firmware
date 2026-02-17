@@ -1,3 +1,6 @@
+substitutions:
+  WARMUP_DURATION_S: '10'
+
 esphome:
   devices:
     - id: device_purifier

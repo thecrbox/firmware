@@ -113,7 +113,7 @@ light:
     device_id: device_interface
     default_transition_length: 0s
     internal: true
-    max_refresh_rate: 200ms
+    max_refresh_rate: 100ms
     #use_psram: false
   - platform: esp32_rmt_led_strip
     chipset: WS2812
@@ -126,7 +126,7 @@ light:
     device_id: device_interface
     default_transition_length: 0s
     internal: true
-    max_refresh_rate: 200ms
+    max_refresh_rate: 100ms
   - platform: esp32_rmt_led_strip
     chipset: WS2812
     pin: GPIO25
@@ -138,7 +138,7 @@ light:
     device_id: device_interface
     default_transition_length: 0s
     internal: true
-    max_refresh_rate: 200ms
+    max_refresh_rate: 100ms
   - platform: esp32_rmt_led_strip
     chipset: WS2812
     pin: GPIO26
@@ -150,7 +150,7 @@ light:
     device_id: device_interface
     default_transition_length: 0s
     internal: true
-    max_refresh_rate: 200ms
+    max_refresh_rate: 100ms
   - platform: esp32_rmt_led_strip
     chipset: WS2812
     pin: GPIO27
@@ -162,7 +162,7 @@ light:
     device_id: device_interface
     default_transition_length: 0s
     internal: true
-    max_refresh_rate: 200ms
+    max_refresh_rate: 100ms
 
   - platform: partition
     default_transition_length: 0s
@@ -177,13 +177,13 @@ light:
     effects:
       - addressable_lambda:
           name: "AQI Boot Sweep"
-          update_interval: 150ms
+          update_interval: 50ms
           lambda: |-
             float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
             thebox_light_effects::aqi_boot_sweep_strip(it, speed);
       - addressable_lambda:
           name: "AQI State"
-          update_interval: 33ms
+          update_interval: 50ms
           lambda: |-
             float aqi = id(sensor_aqi_value).state;
             float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
@@ -271,8 +271,9 @@ script:
           }
 
           using std::isnan;
+          bool is_warming_up = millis() < (${WARMUP_DURATION_S} * 1000);
           bool aqi_available = id(sensor_aqi_value).has_state() && !isnan(id(sensor_aqi_value).state);
-          bool show_boot_animation = !aqi_available && id(cfg_rgb_boot_animation).state;
+          bool show_boot_animation = is_warming_up && id(cfg_rgb_boot_animation).state;
           const char *const effect_state = "AQI State";
           const char *const effect_boot = "AQI Boot Sweep";
 
@@ -306,15 +307,13 @@ script:
 
             brightness = (day_mode ? id(cfg_brightness_auto_day).state : id(cfg_brightness_auto_night).state) / 100.0f;
           } else {
-            aqi_available = false;
-            show_boot_animation = false;
             brightness = 0.0f;
           }
-        
-          if (aqi_available) {
-            set_state(brightness, effect_state, true);
-          } else if (show_boot_animation) {
+
+          if (show_boot_animation) {
             set_state(brightness, effect_boot, true);
+          } else if (aqi_available) {
+            set_state(brightness, effect_state, true);
           } else {
             set_state(0.0f, effect_state, false);
           }

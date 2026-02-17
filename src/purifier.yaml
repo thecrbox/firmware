@@ -53,17 +53,17 @@ fan:
             }
     on_speed_set:
       - lambda: |-
-          if (id(fans_speed).state > 0 && id(ui_mode_select).state == "MANUAL") {
+          if (id(fans_speed).speed > 0 && id(ui_mode_select).current_option() == "MANUAL") {
             ESP_LOGI("UI", "'fans_speed' speed=%d (MANUAL)", x);
             id(cfg_fan_manual).publish_state(x);
           }
     on_turn_on:
       - lambda: |-
-          if (id(ui_mode_select).state == "OFF") {
+          if (id(ui_mode_select).current_option() == "OFF") {
             ESP_LOGI("UI", "'fans_speed' turned ON, OFF --> MANUAL");
             id(ui_mode_select).publish_state("MANUAL");
           } else{
-            ESP_LOGI("UI", "'fans_speed' turned ON, %s (no op)", id(ui_mode_select).state.c_str());
+            ESP_LOGI("UI", "'fans_speed' turned ON, %s (no op)", id(ui_mode_select).current_option().c_str());
             //id(ui_mode_select).publish_state("MANUAL");
           }
     on_turn_off:

@@ -36,7 +36,7 @@ public:
     }
 
     float GetFanSpeed() {
-        auto fan_mode = id(ui_mode_select).state;
+        auto fan_mode = id(ui_mode_select).current_option();
         if (fan_mode == "MANUAL") {
             return ((float)id(cfg_fan_manual).state);
         } else if (fan_mode == "AUTO") {
@@ -152,9 +152,9 @@ public:
         if (!IsWarm()) {
             float fan_min = id(cfg_fan_lvl_min).state;
             ESP_LOGD("main", "Control, speed=idle (warmup)");
-            id(fans_speed).speed = 30;
-            if (id(fans_speed).preset_mode != id(ui_mode_select).state) {
-                id(fans_speed).turn_on().set_preset_mode(id(ui_mode_select).state).perform();
+            id(fans_speed).turn_on().set_speed(30).perform();
+            if (id(fans_speed).get_preset_mode() != id(ui_mode_select).current_option()) {
+                id(fans_speed).turn_on().set_preset_mode(id(ui_mode_select).current_option()).perform();
             }
             return;
         }
@@ -164,9 +164,9 @@ public:
             ESP_LOGD("main", "Control, speed=OFF");
             id(fans_speed).turn_off().set_speed(0).perform();
         } else {
-            if (id(ui_mode_select).state == "AUTO") {
+            if (id(ui_mode_select).current_option() == "AUTO") {
                 ESP_LOGD("main", "Control, speed=%f (auto)", speed);
-                id(fans_speed).speed = speed;
+                id(fans_speed).turn_on().set_speed(speed).perform();
                 id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
             } else {
                 ESP_LOGD("main", "Control, speed=%f (manual)", speed);

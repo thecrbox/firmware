@@ -424,7 +424,7 @@ namespace ui {
         using esphome::display::COLOR_ON;
         using esphome::display::TextAlign;
 
-        const std::string &focus = id(focus_sensors).state;
+        const std::string &focus = id(focus_sensors).current_option();
 
         if (focus == "aqi") {
             std::string title = "AQI " + id(sensor_aqi_category).state;

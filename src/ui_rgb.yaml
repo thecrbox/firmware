@@ -288,7 +288,7 @@ script:
           };
 
           float brightness;
-          auto mode = id(ui_mode_select).state;
+          auto mode = id(ui_mode_select).current_option();
           if (mode == "MANUAL") {
             brightness = id(cfg_brightness_manual).state / 100.0f;
           } else if (mode == "AUTO") {

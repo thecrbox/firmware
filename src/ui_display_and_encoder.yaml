@@ -81,7 +81,7 @@ script:
             }
           }
           
-          if (id(ui_mode_select).state == "AUTO") {
+          if (id(ui_mode_select).current_option() == "AUTO") {
             fn_idler_manual();
             if (id(ui_tick_auto_idle) < ${UI_TICKS_TO_GO_IDLE}) {
               id(ui_tick_auto_idle) += 1;
@@ -90,7 +90,7 @@ script:
                 id(ui_focus_update_auto).execute();
               }
             }
-          } else if (id(ui_mode_select).state == "MANUAL") {
+          } else if (id(ui_mode_select).current_option() == "MANUAL") {
             fn_idler_auto();
             if (id(ui_tick_manual_idle) < ${UI_TICKS_TO_GO_IDLE}) {
               id(ui_tick_manual_idle) += 1;
@@ -98,7 +98,7 @@ script:
                 fn_idler_manual();
               }
             }
-          } else if (id(ui_mode_select).state == "OFF") {
+          } else if (id(ui_mode_select).current_option() == "OFF") {
             fn_idler_manual();
             fn_idler_auto();
           }
@@ -112,7 +112,7 @@ script:
   - id: ui_on_not_idle
     then:
       - lambda: |-
-          ESP_LOGI("UI", "ui_on_not_idle; ui_mode_select='%s'", id(ui_mode_select).state.c_str());
+          ESP_LOGI("UI", "ui_on_not_idle; ui_mode_select='%s'", id(ui_mode_select).current_option().c_str());
           id(ui_tick_auto_idle) = 0;
           id(ui_tick_manual_idle) = 0;
           id(ui_tick_screen_dim) = 0;
@@ -137,13 +137,13 @@ script:
                 format: "UI: ui_on_click; toggling focus"
             - if:
                 condition:
-                  lambda: 'return id(ui_mode_select).state == "AUTO";'
+                  lambda: 'return id(ui_mode_select).current_option() == "AUTO";'
                 then:
                   - logger.log:
                       level: INFO
                       format: "UI: ui_on_click; toggling focus AUTO"
                   - lambda: |-
-                      auto current = id(focus_auto_config).state;
+                      auto current = id(focus_auto_config).current_option();
                       const char *next = nullptr;
                       if (current == "idle") {
                         next = "config_auto_preview";
@@ -167,7 +167,7 @@ script:
                   - script.execute: ui_on_not_idle
             - if:
                 condition:
-                  - lambda: 'return id(ui_mode_select).state == "MANUAL";'
+                  - lambda: 'return id(ui_mode_select).current_option() == "MANUAL";'
                 then:
                   - logger.log:
                       level: INFO
@@ -175,7 +175,7 @@ script:
                   - select.next: focus_manual
             - if:
                 condition:
-                  - lambda: 'return id(ui_mode_select).state == "OFF";'
+                  - lambda: 'return id(ui_mode_select).current_option() == "OFF";'
                 then:
                   - logger.log:
                       level: INFO
@@ -261,51 +261,51 @@ script:
 
                 const int step = (dir > 0 ? +${UI_ENCODER_STEP} : -${UI_ENCODER_STEP});
 
-                if (id(ui_mode_select).state == "AUTO") {
-                  if (id(focus_auto_config).state == "idle") {
+                if (id(ui_mode_select).current_option() == "AUTO") {
+                  if (id(focus_auto_config).current_option() == "idle") {
                     if (dir > 0) {
                       select_next(id(focus_sensors));
                     } else {
                       select_previous(id(focus_sensors));
                     }
-                  } else if (id(focus_auto_config).state == "config_auto_preview") {
+                  } else if (id(focus_auto_config).current_option() == "config_auto_preview") {
                     id(focus_auto_config).make_call().set_option("idle").perform();
                     id(ui_focus_update_auto).execute();
-                  } else if (id(focus_auto_config).state == "config_auto_night_time") {
+                  } else if (id(focus_auto_config).current_option() == "config_auto_night_time") {
                     id(ui_shift_time_30m).execute(false, dir);
-                  } else if (id(focus_auto_config).state == "config_auto_night_fan") {
+                  } else if (id(focus_auto_config).current_option() == "config_auto_night_fan") {
                     id(cfg_fan_auto_night).make_call()
                       .set_value(std::clamp(id(cfg_fan_auto_night).state + step, 0.0f, 100.0f)).perform();
                     PID::Instance().Control();
-                  } else if (id(focus_auto_config).state == "config_auto_night_rgb") {
+                  } else if (id(focus_auto_config).current_option() == "config_auto_night_rgb") {
                     id(cfg_brightness_auto_night).make_call()
                       .set_value(std::clamp(id(cfg_brightness_auto_night).state + step, 0.0f, 100.0f)).perform();
-                  } else if (id(focus_auto_config).state == "config_auto_day_time") {
+                  } else if (id(focus_auto_config).current_option() == "config_auto_day_time") {
                     id(ui_shift_time_30m).execute(true, dir);
-                  } else if (id(focus_auto_config).state == "config_auto_day_fan") {
+                  } else if (id(focus_auto_config).current_option() == "config_auto_day_fan") {
                     id(cfg_fan_auto_day).make_call()
                       .set_value(std::clamp(id(cfg_fan_auto_day).state + step, 0.0f, 100.0f)).perform();
                     PID::Instance().Control();
-                  } else if (id(focus_auto_config).state == "config_auto_day_rgb") {
+                  } else if (id(focus_auto_config).current_option() == "config_auto_day_rgb") {
                     id(cfg_brightness_auto_day).make_call()
                       .set_value(std::clamp(id(cfg_brightness_auto_day).state + step, 0.0f, 100.0f)).perform();
                   }
-                } else if (id(ui_mode_select).state == "MANUAL") {
-                  if (id(focus_manual).state == "idle") {
+                } else if (id(ui_mode_select).current_option() == "MANUAL") {
+                  if (id(focus_manual).current_option() == "idle") {
                     if (dir > 0) {
                       select_next(id(focus_sensors));
                     } else {
                       select_previous(id(focus_sensors));
                     }
-                  } else if (id(focus_manual).state == "config_manual_fan") {
+                  } else if (id(focus_manual).current_option() == "config_manual_fan") {
                     id(cfg_fan_manual).make_call()
                       .set_value(std::clamp(id(cfg_fan_manual).state + step, 0.0f, 100.0f)).perform();
                     PID::Instance().Control();
-                  } else if (id(focus_manual).state == "config_manual_rgb") {
+                  } else if (id(focus_manual).current_option() == "config_manual_rgb") {
                     id(cfg_brightness_manual).make_call()
                       .set_value(std::clamp(id(cfg_brightness_manual).state + step, 0.0f, 100.0f)).perform();
                   }
-                } else if (id(ui_mode_select).state == "OFF") {
+                } else if (id(ui_mode_select).current_option() == "OFF") {
                   select_next(id(focus_off));
                 }
           
@@ -359,7 +359,7 @@ script:
             return;
           }
 
-          auto focus_state = id(focus_auto_config).state;
+          auto focus_state = id(focus_auto_config).current_option();
           if (focus_state == "idle") {
             ESP_LOGI("UI", "focus auto IDLE, switching to idle page");
             id(page_auto).show();
@@ -399,11 +399,11 @@ script:
             return;
           }
 
-          if (id(ui_mode_select).state == "AUTO") {
+          if (id(ui_mode_select).current_option() == "AUTO") {
             id(ui_focus_update_auto).execute();
-          } else if (id(ui_mode_select).state == "MANUAL") {
+          } else if (id(ui_mode_select).current_option() == "MANUAL") {
             id(page_manual).show();
-          } else if (id(ui_mode_select).state == "OFF") {
+          } else if (id(ui_mode_select).current_option() == "OFF") {
             id(page_off).show();
           }
 
@@ -425,7 +425,7 @@ select:
       then:
         - lambda: |-
             if (!id(ui_inputs_locked)) {
-              ESP_LOGI("UI", "ui_mode_select.on_value, ui_mode_select='%s'; i='%d'", id(ui_mode_select).state.c_str(), i);
+              ESP_LOGI("UI", "ui_mode_select.on_value, ui_mode_select='%s'; i='%d'", id(ui_mode_select).current_option().c_str(), i);
               id(ui_display_mode_page).execute();
             } else {
               ESP_LOGI("UI", "ui_mode_select.on_value: UI locked, deferring page update");
@@ -662,9 +662,9 @@ display:
           // Unlocked header hints: turn=edit, push=next
           ui::draw_hints_pair(it, id(img_turn_small), "edit", id(img_push_small), "next", font_small);
     
-          bool day_mode = (id(focus_auto_config).state == "config_auto_day_time" ||
-                           id(focus_auto_config).state == "config_auto_day_fan"  ||
-                           id(focus_auto_config).state == "config_auto_day_rgb");
+          bool day_mode = (id(focus_auto_config).current_option() == "config_auto_day_time" ||
+                           id(focus_auto_config).current_option() == "config_auto_day_fan"  ||
+                           id(focus_auto_config).current_option() == "config_auto_day_rgb");
     
           int brightness = day_mode ? (int) id(cfg_brightness_auto_day).state
                                     : (int) id(cfg_brightness_auto_night).state;
@@ -682,7 +682,7 @@ display:
     
           // focus marker + desc
           const int marker_y = ui::Y_ICONS + 1;
-          int focus_idx = ui::focus_index_from_state(id(focus_auto_config).state.c_str());
+          int focus_idx = ui::focus_index_from_state(id(focus_auto_config).current_option().c_str());
           ui::draw_focus_marker(it, focus_idx, marker_y, id(img_arrow_right));
           ui::draw_focus_desc_auto(it, font_small, day_mode, focus_idx);
     
@@ -731,7 +731,7 @@ display:
           auto font_tiny  = id(f06_u8g2_squeezed);
           using esphome::display::COLOR_ON;
           using esphome::display::TextAlign;
-          if (id(focus_manual).state == "idle") {
+          if (id(focus_manual).current_option() == "idle") {
             ui::draw_mode_header_2icons_title_wifi(it, font_big, "MANUAL", id(img_manual));
             if (!ui::draw_focus_sensors(it, font_value, font_small, font_tiny)) {
               const int x3 = ui::right_icon_x(3);
@@ -743,7 +743,7 @@ display:
             ui::draw_hints_pair(it, id(img_turn_small), "edit", id(img_push_small), "next", font_small);
 
             const int marker_y = ui::Y_ICONS + 1;
-            int focus_idx = ui::focus_index_from_state(id(focus_manual).state.c_str());
+            int focus_idx = ui::focus_index_from_state(id(focus_manual).current_option().c_str());
             ui::draw_focus_marker(it, focus_idx, marker_y, id(img_arrow_right));
             ui::draw_focus_desc_manual(it, font_small, focus_idx);
           }

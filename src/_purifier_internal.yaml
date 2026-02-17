@@ -47,13 +47,13 @@ packages:
     min: 0.001, max: 0.01, step: 0.0005, initial: "0.002f",
     group: sorting_group_purifier_config_auto_advanced, weight: 12, device_id: device_purifier } }
   locked_cfg_boost_derivative_decay: !include { file: thebox_guarded_number.yaml, vars: {
-    name: "AUTO: Decay derivative %/s",
+    name: "AUTO: Decay derivative %⁄s",
     id: cfg_boost_derivative_decay,
     unlocker: unlock_purifier_config_auto_advanced,
     min: 0.100, max: 0.500, step: 0.01, initial: "0.50f",
     group: sorting_group_purifier_config_auto_advanced, weight: 13, device_id: device_purifier } }
   locked_cfg_boost_integral_decay: !include { file: thebox_guarded_number.yaml, vars: {
-    name: "AUTO: Decay integral %/s",
+    name: "AUTO: Decay integral %⁄s",
     id: cfg_boost_integral_decay,
     unlocker: unlock_purifier_config_auto_advanced,
     min: 0.000, max: 0.050, step: 0.001, initial: "0.015f",

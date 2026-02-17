@@ -13,29 +13,6 @@ esphome:
   devices:
     - id: device_sensor
       name: "Sensor"
-  on_boot:
-    priority: -100
-    then:
-      - lambda: |-
-          const float no_data = NAN;
-          id(sensor_pm_1_0_in).publish_state(no_data);
-          id(sensor_pm_2_5_in).publish_state(no_data);
-          id(sensor_pm_4_0_in).publish_state(no_data);
-          id(sensor_pm_10_0_in).publish_state(no_data);
-          id(sensor_voc_in).publish_state(no_data);
-          id(sensor_nox_in).publish_state(no_data);
-          id(sensor_temperature_in).publish_state(no_data);
-          id(sensor_humidity_in).publish_state(no_data);
-          id(sensor_pm_1_0).publish_state(no_data);
-          id(sensor_pm_2_5).publish_state(no_data);
-          id(sensor_pm_4_0).publish_state(no_data);
-          id(sensor_pm_10_0).publish_state(no_data);
-          id(sensor_voc).publish_state(no_data);
-          id(sensor_nox).publish_state(no_data);
-          id(sensor_temperature).publish_state(no_data);
-          id(sensor_humidity).publish_state(no_data);
-      - script.execute: update_pm_data_outputs
-      - script.execute: update_air_quality_outputs
 
 globals:
   - id: pm_sensor_active_source

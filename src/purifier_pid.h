@@ -166,8 +166,17 @@ public:
 
     void Control() {
         if (!IsWarm()) {
-            ESP_LOGD("main", "Control, speed=idle (warmup)");
-            id(fans_speed).turn_on().set_speed(30).perform();
+            auto fan_mode = id(ui_mode_select).current_option();
+            if (fan_mode == "MANUAL") {
+                SetTransition(true);
+                ESP_LOGI("main", "Control, speed=idle (warmup MANUAL)");
+                id(fans_speed).turn_on().set_speed(30).perform();
+            } else {
+                ESP_LOGI("main", "Control, speed=idle (warmup AUTO)");
+                SetTransition(true);
+                id(fans_speed).speed = 30;
+                id(fans_speed).make_call().set_preset_mode("AUTO").perform();
+            }
             return;
         }
 

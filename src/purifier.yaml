@@ -80,6 +80,13 @@ fan:
           }
     on_turn_on:
       - lambda: |-
+          static bool first_on = true;
+          if (first_on) {
+            ESP_LOGI("UI", "'fans_speed' turned ON for the first time --> no-op");
+            first_on = false;
+            return;
+          }
+
           if (id(fans_speed).get_preset_mode() == "AUTO") {
             ESP_LOGI("UI", "'fans_speed' turned ON --> UI_AUTO");
             id(ui_mode_select).publish_state("AUTO");

@@ -9,7 +9,7 @@
 #include "esphome/core/log.h"                     // For ESP_LOGD
 
 #include <chrono>
-#include <algorithm> // For std::ranges::clamp
+#include <algorithm> // For std::clamp
 #include <cmath>
 
 class PID {
@@ -134,14 +134,14 @@ public:
             boost_proportional = pm25f_target_delta * boost_proportional_jump;
 
             // clamp boosts
-            boost_proportional = std::ranges::clamp(boost_proportional, 0.0f, 100.0f);
-            boost_integral = std::ranges::clamp(boost_integral, 0.0f, 50.0f);
-            boost_derivative = std::ranges::clamp(boost_derivative, 0.0f, 30.0f);
+            boost_proportional = std::clamp(boost_proportional, 0.0f, 100.0f);
+            boost_integral = std::clamp(boost_integral, 0.0f, 50.0f);
+            boost_derivative = std::clamp(boost_derivative, 0.0f, 30.0f);
         }
 
 
         boosted_fan_speed = fan_min + boost_proportional + boost_integral + boost_derivative;
-        boosted_fan_speed = std::ranges::clamp(boosted_fan_speed, 0.0f, fan_max);
+        boosted_fan_speed = std::clamp(boosted_fan_speed, 0.0f, fan_max);
 
         // move forward
         pm25f_prev = pm25f_curr;

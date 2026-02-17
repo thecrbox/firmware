@@ -203,65 +203,12 @@ sensor:
     web_server:
       sorting_group_id: sorting_group_sensor
     lambda: |-
-      using std::isnan;
-
-      // Read inlets (may be NAN if not fed by hardware)
-      const float pm1  = id(sensor_pm_1_0_in).state;
-      const float pm25 = id(sensor_pm_2_5_in).state;
-      const float pm4  = id(sensor_pm_4_0_in).state;
-      const float pm10 = id(sensor_pm_10_0_in).state;
-
-      struct BP { float Clow; float Chigh; int Ilow; int Ihigh; };
-
-      // EPA PM2.5 AQI (truncate to 0.1 µg/m³)
-      auto aqi_pm25 = [](float c)->float {
-        float Ct = floorf(c * 10.0f) / 10.0f;
-        const BP bp[] = {
-          {  0.0f,  12.0f,   0,  50},
-          { 12.1f,  35.4f,  51, 100},
-          { 35.5f,  55.4f, 101, 150},
-          { 55.5f, 150.4f, 151, 200},
-          {150.5f, 250.4f, 201, 300},
-          {250.5f, 350.4f, 301, 400},
-          {350.5f, 500.4f, 401, 500},
-        };
-        for (auto &b : bp) if (Ct <= b.Chigh)
-          return (b.Ihigh - b.Ilow) * (Ct - b.Clow) / (b.Chigh - b.Clow) + b.Ilow;
-        return 500.0f;
-      };
-
-      // EPA PM10 AQI (truncate to integer µg/m³)
-      auto aqi_pm10 = [](float c)->float {
-        float Ct = floorf(c);
-        const BP bp[] = {
-          {  0.0f,  54.0f,   0,  50},
-          { 55.0f, 154.0f,  51, 100},
-          {155.0f, 254.0f, 101, 150},
-          {255.0f, 354.0f, 151, 200},
-          {355.0f, 424.0f, 201, 300},
-          {425.0f, 504.0f, 301, 400},
-          {505.0f, 604.0f, 401, 500},
-        };
-        for (auto &b : bp) if (Ct <= b.Chigh)
-          return (b.Ihigh - b.Ilow) * (Ct - b.Clow) / (b.Chigh - b.Clow) + b.Ilow;
-        return 500.0f;
-      };
-
-      // Compute AQIs only for available inputs
-      float combined = -1.0f;
-
-      if (!isnan(pm1))  { float v = aqi_pm25(pm1);  if (v > combined) combined = v; }   // PM1.0 → PM2.5 curve
-      if (!isnan(pm25)) { float v = aqi_pm25(pm25); if (v > combined) combined = v; }
-      if (!isnan(pm4))  { float v = aqi_pm10(pm4);  if (v > combined) combined = v; }   // PM4.0 → PM10 curve
-      if (!isnan(pm10)) { float v = aqi_pm10(pm10); if (v > combined) combined = v; }
-
-      if (combined < 0.0f) return NAN;   // no inputs available yet
-
-      // Clamp to 0…500
-      if (combined < 0.0f) combined = 0.0f;
-      if (combined > 500.0f) combined = 500.0f;
-
-      return combined;
+      return aqi_calculator::calculate_aqi(
+          id(sensor_pm_1_0_in).state,
+          id(sensor_pm_2_5_in).state,
+          id(sensor_pm_4_0_in).state,
+          id(sensor_pm_10_0_in).state
+      );
 
 text_sensor:
   - platform: template

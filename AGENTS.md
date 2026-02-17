@@ -10,6 +10,11 @@
    ```
 3. When compiling, PlatformIO may need to download ESP-IDF toolchains. Behind the proxy this can require patience; rerun the command if transient HTTP 403 errors appear.
 
+# Source code
+
+Use `.yml` files in current dir and contents of ./src/ dir
+Ignore `.esphome`, `.git`, `.idea`; always exclude them
+
 # Workflow
 
 Use `esphome compile ./thebox4.yaml` often to check your intermediate work results.

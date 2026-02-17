@@ -175,7 +175,7 @@ public:
                 ESP_LOGI("main", "Control, speed=idle (warmup AUTO)");
                 SetTransition(true);
                 id(fans_speed).speed = 30;
-                id(fans_speed).make_call().set_preset_mode("AUTO").perform();
+                id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
             }
             return;
         }
@@ -194,12 +194,14 @@ public:
                     ESP_LOGI("main", "Control, speed=%f (AUTO starting...)", speed);
                     SetTransition(true);
                     id(fans_speed).speed = speed;
-                    id(fans_speed).make_call().set_preset_mode("AUTO").perform();
+                    id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
                 } else {
                     ESP_LOGI("main", "Control, speed=%f (AUTO continued)", speed);
-                    SetTransition(true);
-                    id(fans_speed).speed = speed;
-                    id(fans_speed).publish_state();
+                    if ((id(fans_speed).speed != floor(speed))) {
+                        SetTransition(true);
+                        id(fans_speed).speed = speed;
+                        id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
+                    }
                 }
             } else { // ui_mode_select is "MANUAL"
                 ESP_LOGI("main", "Control, speed=%f (manual)", speed);

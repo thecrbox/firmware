@@ -58,12 +58,12 @@ fan:
       - lambda: |-
           // If fan is off, ignore speed changes
           if (!id(fans_speed).state) {
-            ESP_LOGD("UI", "'fans_speed' on_speed_set ignored, fan is OFF");
+            ESP_LOGI("UI", "'fans_speed' on_speed_set ignored, fan is OFF");
             return;
           }
           
           if (PID::Instance().ClearTransition()) {
-            ESP_LOGD("UI", "'fans_speed' on_speed_set ignored, PID in transition");
+            ESP_LOGI("UI", "'fans_speed' on_speed_set ignored, PID in transition");
             return;
           }
 

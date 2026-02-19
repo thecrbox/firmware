@@ -167,25 +167,45 @@ sensor:
     update_interval: never
     lambda: return NAN;
 
-  - platform: template
-    name: "AQI (combined)"
-    id: sensor_aqi_value
-    unit_of_measurement: "AQI"
+  - platform: aqi
+    name: "CAQI (EU)"
+    id: sensor_caqi_value
     device_class: aqi
     icon: mdi:air-filter
-    accuracy_decimals: 1     # keep decimals for the "Great" cut
-    update_interval: never
+    accuracy_decimals: 1
     state_class: measurement
     device_id: device_sensor
     web_server:
       sorting_group_id: sorting_group_sensor
-    lambda: |-
-      return aqi_calculator::calculate_aqi(
-          id(sensor_pm_1_0_in).state,
-          id(sensor_pm_2_5_in).state,
-          id(sensor_pm_4_0_in).state,
-          id(sensor_pm_10_0_in).state
-      );
+    pm_2_5: sensor_pm_2_5_in
+    pm_10_0: sensor_pm_10_0_in
+    calculation_type: CAQI
+
+  - platform: aqi
+    name: "AQI (US)"
+    id: sensor_aqi_value
+    device_class: aqi
+    icon: mdi:air-filter
+    accuracy_decimals: 1
+    state_class: measurement
+    device_id: device_sensor
+    web_server:
+      sorting_group_id: sorting_group_sensor
+    pm_2_5: sensor_pm_2_5_in
+    pm_10_0: sensor_pm_10_0_in
+    calculation_type: AQI
+    on_value:
+      - text_sensor.template.publish:
+          id: sensor_aqi_category
+          state: !lambda |-
+            if (isnan(x))      return {"?"};
+            if (x <= 10.0f)    return {"Great"};
+            if (x <= 50.0f)    return {"Good"};
+            if (x <= 100.0f)   return {"Moderate"};
+            if (x <= 150.0f)   return {"Bad"};
+            if (x <= 200.0f)   return {"Unhealthy"};
+            if (x <= 300.0f)   return {"Extreme"};
+            return {"Hazardous"};
 
 text_sensor:
   - platform: template
@@ -196,16 +216,6 @@ text_sensor:
     device_id: device_sensor
     web_server:
       sorting_group_id: sorting_group_sensor
-    lambda: |-
-      float aqi = id(sensor_aqi_value).state;
-      if (isnan(aqi))      return {"?"};
-      if (aqi <= 10.0f)    return {"Great"};
-      if (aqi <= 50.0f)    return {"Good"};
-      if (aqi <= 100.0f)   return {"Moderate"};
-      if (aqi <= 150.0f)   return {"Bad"};
-      if (aqi <= 200.0f)   return {"Unhealthy"};
-      if (aqi <= 300.0f)   return {"Extreme"};
-      return {"Hazardous"};
 
   - platform: template
     id: sensor_pm_source
@@ -247,10 +257,3 @@ script:
             default: label = "auto"; break;
           }
           id(sensor_pm_source).publish_state(label);
-
-  - id: update_air_quality_outputs
-    mode: restart
-    then:
-      - lambda: |-
-          id(sensor_aqi_value).update();
-          id(sensor_aqi_category).update();

@@ -21,7 +21,6 @@ sensor:
               id(sensor_pm_1_0_in).publish_state(x);
               id(pm_sensor_active_source) = 2;
           - script.execute: update_pm_data_outputs
-          - script.execute: update_air_quality_outputs
     pm_2_5:
       name: "${SENSOR_NAME_PM_2_5} (SEN5x)"
       id: sensor_pm_2_5_sen5x
@@ -41,7 +40,6 @@ sensor:
               id(sensor_pm_2_5_in).publish_state(x);
               id(pm_sensor_active_source) = 2;
           - script.execute: update_pm_data_outputs
-          - script.execute: update_air_quality_outputs
     pm_4_0:
       name: "${SENSOR_NAME_PM_4_0} (SEN5x)"
       id: sensor_pm_4_0_sen5x
@@ -61,7 +59,6 @@ sensor:
               id(sensor_pm_4_0_in).publish_state(x);
               id(pm_sensor_active_source) = 2;
           - script.execute: update_pm_data_outputs
-          - script.execute: update_air_quality_outputs
     pm_10_0:
       name: "${SENSOR_NAME_PM_10_0} (SEN5x)"
       id: sensor_pm_10_0_sen5x
@@ -81,7 +78,6 @@ sensor:
               id(sensor_pm_10_0_in).publish_state(x);
               id(pm_sensor_active_source) = 2;
           - script.execute: update_pm_data_outputs
-          - script.execute: update_air_quality_outputs
     temperature:
       name: "${SENSOR_NAME_TEMPERATURE} (SEN5x)"
       id: sensor_temperature_sen5x
@@ -101,7 +97,6 @@ sensor:
               id(sensor_temperature_in).publish_state(x);
               id(pm_sensor_active_source) = 2;
           - script.execute: update_pm_data_outputs
-          - script.execute: update_air_quality_outputs
     humidity:
       name: "${SENSOR_NAME_HUMIDITY} (SEN5x)"
       id: sensor_humidity_sen5x
@@ -121,7 +116,6 @@ sensor:
               id(sensor_humidity_in).publish_state(x);
               id(pm_sensor_active_source) = 2;
           - script.execute: update_pm_data_outputs
-          - script.execute: update_air_quality_outputs
     nox:
       name: "${SENSOR_NAME_NOX} (SEN5x)"
       id: sensor_nox_sen5x
@@ -140,7 +134,6 @@ sensor:
               id(sensor_nox_in).publish_state(x);
               id(pm_sensor_active_source) = 2;
           - script.execute: update_pm_data_outputs
-          - script.execute: update_air_quality_outputs
     voc:
       name: "${SENSOR_NAME_VOC} (SEN5x)"
       id: sensor_voc_sen5x
@@ -159,7 +152,6 @@ sensor:
               id(sensor_voc_in).publish_state(x);
               id(pm_sensor_active_source) = 2;
           - script.execute: update_pm_data_outputs
-          - script.execute: update_air_quality_outputs
     temperature_compensation:
       offset: 0
       normalized_offset_slope: 0

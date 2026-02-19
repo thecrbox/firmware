@@ -24,7 +24,6 @@ esphome:
 
   includes:
     - src/purifier_pid.h
-    - src/aqi_calculator.h
 
 external_components:
   - source:

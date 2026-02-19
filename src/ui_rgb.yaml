@@ -16,6 +16,22 @@ globals:
     type: bool
     restore_value: false
     initial_value: 'false'
+  - id: rgb_fan_num_segments
+    type: int
+    restore_value: true
+    initial_value: '5' # Default to 5 fans
+  - id: rgb_fan_leds_per_segment
+    type: int
+    restore_value: true
+    initial_value: '8' # Default to 8 LEDs per fan
+  - id: rgb_aqi_max_value
+    type: float
+    restore_value: true
+    initial_value: '150.0f' # Default to 150.0f
+  - id: rgb_reset_boot_animation
+    type: bool
+    restore_value: false
+    initial_value: 'false'
 
 number:
   - platform: template
@@ -63,21 +79,91 @@ number:
     initial_value: 100
     step: 1.0
     restore_value: true
+  - platform: template
+    name: "AQI Max Value"
+    id: cfg_aqi_max_value
+    device_id: device_interface
+    web_server:
+      sorting_group_id: sorting_group_interface
+    entity_category: "config"
+    icon: "mdi:gauge"
+    optimistic: true
+    restore_value: true
+    min_value: 30.0
+    max_value: 500.0
+    initial_value: 150.0
+    step: 1.0
+    set_action:
+      - lambda: |-
+          id(rgb_aqi_max_value) = x;
+          id(rgb_reset_boot_animation) = true; // Set reset flag
+          id(cfg_aqi_max_value).publish_state(x);
+      - script.execute: apply_rgb_state
 
 select:
   - platform: template
-    name: "RGB hardware"
-    id: cfg_rgb_profile
+    name: "RGB Mode"
+    id: cfg_rgb_mode
     device_id: device_interface
     optimistic: false
     options:
-      - "LED strip (30)"
-      - "RGB fans (5x8)"
+      - "Single LED Strip (30) + Clone"
+      - "Dual LED Strip (2x30)"
+      - "1 Fan, 6 LEDs"
+      - "1 Fan, 8 LEDs"
+      - "1 Fan, 9 LEDs"
+      - "1 Fan, 12 LEDs"
+      - "1 Fan, 15 LEDs"
+      - "1 Fan, 18 LEDs"
+      - "1 Fan, 24 LEDs"
+      - "2 Fans, 6 LEDs"
+      - "2 Fans, 8 LEDs"
+      - "2 Fans, 9 LEDs"
+      - "2 Fans, 12 LEDs"
+      - "2 Fans, 15 LEDs"
+      - "2 Fans, 18 LEDs"
+      - "2 Fans, 24 LEDs"
+      - "3 Fans, 6 LEDs"
+      - "3 Fans, 8 LEDs"
+      - "3 Fans, 9 LEDs"
+      - "3 Fans, 12 LEDs"
+      - "3 Fans, 15 LEDs"
+      - "3 Fans, 18 LEDs"
+      - "3 Fans, 24 LEDs"
+      - "4 Fans, 6 LEDs"
+      - "4 Fans, 8 LEDs"
+      - "4 Fans, 9 LEDs"
+      - "4 Fans, 12 LEDs"
+      - "4 Fans, 15 LEDs"
+      - "4 Fans, 18 LEDs"
+      - "4 Fans, 24 LEDs"
+      - "5 Fans, 6 LEDs"
+      - "5 Fans, 8 LEDs"
+      - "5 Fans, 9 LEDs"
+      - "5 Fans, 12 LEDs"
+      - "5 Fans, 15 LEDs"
+      - "5 Fans, 18 LEDs"
+      - "5 Fans, 24 LEDs"
     web_server:
       sorting_group_id: sorting_group_interface
     set_action:
       - lambda: |-
-          id(cfg_rgb_profile).publish_state(x);
+          if (x == "Single LED Strip (30) + Clone" || x == "Dual LED Strip (2x30)") {
+            // Strip modes, no change to fan globals
+          } else {
+            // Extract num_fans and leds_per_fan from the string
+            int num_fans = 0;
+            int leds_per_fan = 0;
+            if (sscanf(x.c_str(), "%d Fan, %d LEDs", &num_fans, &leds_per_fan) == 2) {
+              id(rgb_fan_num_segments) = num_fans;
+              id(rgb_fan_leds_per_segment) = leds_per_fan;
+            } else if (sscanf(x.c_str(), "%d Fans, %d LEDs", &num_fans, &leds_per_fan) == 2) {
+              id(rgb_fan_num_segments) = num_fans;
+              id(rgb_fan_leds_per_segment) = leds_per_fan;
+            }
+          }
+          id(cfg_rgb_mode).publish_state(x);
+          id(rgb_reset_boot_animation) = true; // Also reset boot animation on mode change
       - script.execute: apply_rgb_state
     restore_value: true
 
@@ -103,7 +189,7 @@ switch:
 
 light:
   - platform: esp32_rmt_led_strip
-    chipset: WS2811
+    chipset: WS2812
     pin: GPIO32
     num_leds: 30
     rmt_symbols: 128
@@ -118,8 +204,8 @@ light:
   - platform: esp32_rmt_led_strip
     chipset: WS2812
     pin: GPIO33
-    num_leds: 8
-    rmt_symbols: 64
+    num_leds: 30
+    rmt_symbols: 128
     rgb_order: GRB
     name: "RGB fan 2"
     id: rgb_fan2
@@ -130,7 +216,7 @@ light:
   - platform: esp32_rmt_led_strip
     chipset: WS2812
     pin: GPIO25
-    num_leds: 8
+    num_leds: 24
     rmt_symbols: 64
     rgb_order: GRB
     name: "RGB fan 3"
@@ -142,7 +228,7 @@ light:
   - platform: esp32_rmt_led_strip
     chipset: WS2812
     pin: GPIO26
-    num_leds: 8
+    num_leds: 24
     rmt_symbols: 64
     rgb_order: GRB
     name: "RGB fan 4"
@@ -154,7 +240,7 @@ light:
   - platform: esp32_rmt_led_strip
     chipset: WS2812
     pin: GPIO27
-    num_leds: 8
+    num_leds: 24
     rmt_symbols: 64
     rgb_order: GRB
     name: "RGB fan 5"
@@ -174,20 +260,53 @@ light:
       - id: rgb_fan1
         from: 0
         to: 29
+      - id: rgb_fan2
+        from: 0
+        to: 29
     effects:
       - addressable_lambda:
           name: "AQI Boot Sweep"
           update_interval: 50ms
           lambda: |-
             float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
-            thebox_light_effects::aqi_boot_sweep_strip(it, speed);
+            thebox_light_effects::aqi_boot_sweep_strip_clone(it, speed, id(rgb_aqi_max_value), id(rgb_reset_boot_animation));
+            id(rgb_reset_boot_animation) = false; // Reset the flag after use
       - addressable_lambda:
           name: "AQI State"
           update_interval: 50ms
           lambda: |-
             float aqi = id(sensor_aqi_value).state;
             float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
-            thebox_light_effects::aqi_state_strip(it, aqi, speed);
+            thebox_light_effects::aqi_state_strip_clone(it, aqi, speed, id(rgb_aqi_max_value));
+
+  - platform: partition
+    default_transition_length: 0s
+    name: "RGB dual strip group"
+    id: rgb_profile_dual_strip
+    device_id: device_interface
+    internal: true
+    segments:
+      - id: rgb_fan1
+        from: 0
+        to: 29
+      - id: rgb_fan2
+        from: 0
+        to: 29
+    effects:
+      - addressable_lambda:
+          name: "AQI Boot Sweep"
+          update_interval: 50ms
+          lambda: |-
+            float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
+            thebox_light_effects::aqi_boot_sweep_dual_strip(it, speed, id(rgb_aqi_max_value), id(rgb_reset_boot_animation));
+            id(rgb_reset_boot_animation) = false; // Reset the flag after use
+      - addressable_lambda:
+          name: "AQI State"
+          update_interval: 50ms
+          lambda: |-
+            float aqi = id(sensor_aqi_value).state;
+            float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
+            thebox_light_effects::aqi_state_dual_strip(it, aqi, speed, id(rgb_aqi_max_value));
 
   - platform: partition
     default_transition_length: 0s
@@ -198,33 +317,34 @@ light:
     segments:
       - id: rgb_fan1
         from: 0
-        to: 7
+        to: 29 # Covers max 30 LEDs for rgb_fan1
       - id: rgb_fan2
         from: 0
-        to: 7
+        to: 29 # Covers max 30 LEDs for rgb_fan2
       - id: rgb_fan3
         from: 0
-        to: 7
+        to: 23 # Covers max 24 LEDs for rgb_fan3
       - id: rgb_fan4
         from: 0
-        to: 7
+        to: 23 # Covers max 24 LEDs for rgb_fan4
       - id: rgb_fan5
         from: 0
-        to: 7
+        to: 23 # Covers max 24 LEDs for rgb_fan5
     effects:
       - addressable_lambda:
           name: "AQI Boot Sweep"
           update_interval: 150ms
           lambda: |-
             float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
-            thebox_light_effects::aqi_boot_sweep_fans(it, speed);
+            thebox_light_effects::aqi_boot_sweep_fans(it, id(rgb_fan_num_segments), id(rgb_fan_leds_per_segment), id(rgb_aqi_max_value), speed, id(rgb_reset_boot_animation));
+            id(rgb_reset_boot_animation) = false; // Reset the flag after use
       - addressable_lambda:
           name: "AQI State"
           update_interval: 33ms
           lambda: |-
             float aqi = id(sensor_aqi_value).state;
             float speed  = (id(fans_speed).state ? (id(fans_speed).speed) : (0)) / 100.0f;
-            thebox_light_effects::aqi_state_fans(it, aqi, speed);
+            thebox_light_effects::aqi_state_fans(it, id(rgb_fan_num_segments), id(rgb_fan_leds_per_segment), id(rgb_aqi_max_value), aqi, speed);
 
 script:
   - id: sync_rgb_profile_select
@@ -237,6 +357,7 @@ script:
             light_state->turn_off().set_brightness(0.0f).perform();
           };
           turn_off_light(id(rgb_profile_strip));
+          turn_off_light(id(rgb_profile_dual_strip));
           turn_off_light(id(rgb_profile_fans));
 
       - script.execute: apply_rgb_state
@@ -248,19 +369,40 @@ script:
           using esphome::light::LightState;
           LightState *active = nullptr;
           LightState *strip = id(rgb_profile_strip);
+          LightState *dual_strip = id(rgb_profile_dual_strip);
           LightState *fans = id(rgb_profile_fans);
 
-          if (id(cfg_rgb_profile).active_index() == 0) {
+          auto selected_option = id(cfg_rgb_mode).state;
+
+          if (selected_option == "Single LED Strip (30) + Clone") {
             active = strip;
             if (fans->get_effect_name() != "None") {
               fans->turn_on().set_effect("none").set_brightness(0).perform();
               fans->turn_off().set_brightness(0.0f).perform();
             }
-          } else {
+            if (dual_strip->get_effect_name() != "None") {
+              dual_strip->turn_on().set_effect("none").set_brightness(0).perform();
+              dual_strip->turn_off().set_brightness(0.0f).perform();
+            }
+          } else if (selected_option == "Dual LED Strip (2x30)") {
+            active = dual_strip;
+            if (fans->get_effect_name() != "None") {
+              fans->turn_on().set_effect("none").set_brightness(0).perform();
+              fans->turn_off().set_brightness(0.0f).perform();
+            }
+            if (strip->get_effect_name() != "None") {
+              strip->turn_on().set_effect("none").set_brightness(0).perform();
+              strip->turn_off().set_brightness(0.0f).perform();
+            }
+          } else { // Fan modes selected
             active = fans;
             if (strip->get_effect_name() != "None") {
               strip->turn_on().set_effect("none").set_brightness(0).perform();
               strip->turn_off().set_brightness(0.0f).perform();
+            }
+            if (dual_strip->get_effect_name() != "None") {
+              dual_strip->turn_on().set_effect("none").set_brightness(0).perform();
+              dual_strip->turn_off().set_brightness(0.0f).perform();
             }
           }
 
@@ -271,7 +413,8 @@ script:
           }
 
           using std::isnan;
-          bool is_warming_up = millis() < (${WARMUP_DURATION_S} * 1000);
+          // WARMUP_DURATION_S is now globally available via include
+          bool is_warming_up = millis() < (aqifx::kWarmupDurationS * 1000);
           bool aqi_available = id(sensor_aqi_value).has_state() && !isnan(id(sensor_aqi_value).state);
           bool show_boot_animation = is_warming_up && id(cfg_rgb_boot_animation).state;
           const char *const effect_state = "AQI State";

@@ -7,7 +7,6 @@
 #include "esphome/components/fan/fan.h"           // For id(fans_speed)
 #include "esphome/components/time/real_time_clock.h"
 #include "esphome/core/log.h"                     // For ESP_LOGD
-#include "time_helpers.h"
 
 #include <chrono>
 #include <algorithm> // For std::clamp
@@ -85,12 +84,20 @@ public:
         float fan_min = id(cfg_fan_lvl_min).state;
         float fan_max = 100;
         auto t = id(mysntp).now();
+        const bool time_valid = t.is_valid();
         auto td = id(cfg_auto_time_day).state_as_esptime();
         auto tn = id(cfg_auto_time_night).state_as_esptime();
-        
-        bool day_mode = time_helpers::is_day_mode(t, td, tn);
-        if (!t.is_valid()) {
-            ESP_LOGD("main", "PID::Calculate running without valid time - assuming day mode");
+        bool day_mode = true;
+        if (time_valid) {
+            if (td.hour < tn.hour || (td.hour == tn.hour && td.minute < tn.minute)) {
+                // normal case: day starts before night
+                day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) &&
+                           (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+            } else {
+                // special case: day starts after night (overnight)
+                day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) ||
+                           (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+            }
         }
 
         if (!day_mode) {
@@ -110,6 +117,10 @@ public:
         float aqi_target_delta = (float)id(diag_auto_target_delta).state;
         float aqi_deadband = (float)id(cfg_aqi_deadband).state;
         float delta = aqi_curr - aqi_prev;
+
+        if (!time_valid) {
+            ESP_LOGD("main", "PID::Calculate running without valid time - assuming day mode");
+        }
 
         if (IsWarm()) {
 

@@ -2,7 +2,6 @@ esphome:
   includes:
     - src/ui_rgb_aqifx_common.h
     - src/ui_rgb_aqifx_profiles.h
-    - src/time_helpers.h
   on_boot:
     priority: -50
     then:
@@ -436,10 +435,19 @@ script:
           if (mode == "MANUAL") {
             brightness = id(cfg_brightness_manual).state / 100.0f;
           } else if (mode == "AUTO") {
-            auto t = id(mysntp).now();
             auto td = id(cfg_auto_time_day).state_as_esptime();
             auto tn = id(cfg_auto_time_night).state_as_esptime();
-            bool day_mode = time_helpers::is_day_mode(t, td, tn);
+            auto t = id(mysntp).now();
+
+            bool day_mode = true;
+            if (td.hour < tn.hour || (td.hour == tn.hour && td.minute < tn.minute)) {
+              day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) &&
+                         (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+            } else {
+              day_mode = (t.hour > td.hour || (t.hour == td.hour && t.minute >= td.minute)) ||
+                         (t.hour < tn.hour || (t.hour == tn.hour && t.minute < tn.minute));
+            }
+
             brightness = (day_mode ? id(cfg_brightness_auto_day).state : id(cfg_brightness_auto_night).state) / 100.0f;
           } else {
             brightness = 0.0f;

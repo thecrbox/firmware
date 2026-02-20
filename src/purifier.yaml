@@ -205,7 +205,7 @@ sensor:
 
   - platform: template
     name: "Boost proportional"
-    id: diag_auto_fan_boost_proportional
+    id: diag_boost_proportional
     device_id: device_purifier
     web_server:
       sorting_group_id: sorting_group_purifier_diagnostic
@@ -216,7 +216,7 @@ sensor:
   - platform: template
     name: "Boost derivative"
     icon: "mdi:rocket-launch"
-    id: diag_auto_fan_boost_derivative
+    id: diag_boost_derivative
     device_id: device_purifier
     web_server:
       sorting_group_id: sorting_group_purifier_diagnostic
@@ -226,13 +226,23 @@ sensor:
   - platform: template
     name: "Boost integral"
     icon: "mdi:rocket-launch"
-    id: diag_auto_fan_boost_integral
+    id: diag_boost_integral
     device_id: device_purifier
     web_server:
       sorting_group_id: sorting_group_purifier_diagnostic
     accuracy_decimals: 1
     unit_of_measurement: "%"
     entity_category: "diagnostic"
+  - platform: template
+    name: "Dynamic integral cap"
+    id: diag_dynamic_integral_cap
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_diagnostic
+    icon: "mdi:chart-bell-curve-cumulative"
+    entity_category: "diagnostic"
+    accuracy_decimals: 1
+    unit_of_measurement: "%"
   - platform: template
     name: "Delta target"
     id: diag_auto_target_delta
@@ -355,6 +365,22 @@ number:
     initial_value: 25.0
     step: 1
     restore_value: true
+
+  - platform: template
+    name: "AUTO: Target Comfort Margin"
+    id: cfg_integral_damping_zone
+    device_id: device_purifier
+    web_server:
+      sorting_group_id: sorting_group_purifier_config_auto
+    entity_category: "config"
+    unit_of_measurement: ""
+    optimistic: true
+    min_value: 0.0
+    max_value: 100.0
+    initial_value: 30.0
+    step: 1
+    restore_value: true
+
 
 datetime:
   - platform: template

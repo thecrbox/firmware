@@ -1,15 +1,13 @@
 #pragma once
 
-//#include "thebox_globals.h"
-//#include "thebox.h"
-#include "esphome/components/number/number.h"     // For id(cfg_*), id(diag_*)
-#include "esphome/components/sensor/sensor.h"     // For id(sensor_*)
-#include "esphome/components/fan/fan.h"           // For id(fans_speed)
+#include "esphome/components/number/number.h"
+#include "esphome/components/sensor/sensor.h"
+#include "esphome/components/fan/fan.h"
 #include "esphome/components/time/real_time_clock.h"
-#include "esphome/core/log.h"                     // For ESP_LOGD
+#include "esphome/core/log.h"
 
 #include <chrono>
-#include <algorithm> // For std::clamp
+#include <algorithm>
 #include <cmath>
 
 class PID {
@@ -21,8 +19,11 @@ protected:
     float boost_integral;
     float boost_proportional;
     float boosted_fan_speed;
+    float dynamic_integral_cap;
     std::chrono::steady_clock::time_point prev_calculation_timestamp;
-    PID() : aqi_prev(0), boost_derivative(0), boost_integral(0), boost_proportional(0), boosted_fan_speed(0) {
+
+    static constexpr float INTEGRAL_MIN_CAP_IN_ZONE = 5.0f;
+    PID() : aqi_prev(0), boost_derivative(0), boost_integral(0), boost_proportional(0), boosted_fan_speed(0), dynamic_integral_cap(0) {
 
     }
 
@@ -50,16 +51,8 @@ public:
         return was_transition;
     }
 
-    float GetFanSpeed() {
-        auto fan_mode = id(ui_mode_select).current_option();
-        if (fan_mode == "MANUAL") {
-            auto manual_fan_speed = id(cfg_fan_manual).state;
-            return manual_fan_speed > 0 ? manual_fan_speed : 2.0f;
-        } else if (fan_mode == "AUTO") {
-            return boosted_fan_speed > 0 ? boosted_fan_speed : 2.0f;
-        } else {
-            return 0;
-        }
+    float GetAutoFanSpeed() {
+        return boosted_fan_speed > 0 ? boosted_fan_speed : 2.0f;
     }
 
     void Calculate() {
@@ -112,10 +105,14 @@ public:
         float boost_integral_jump = id(cfg_boost_integral_jump).state;
         float boost_integral_decay = id(cfg_boost_integral_decay).state;
         float boost_proportional_jump = id(cfg_boost_proportional_jump).state;
+        float integral_max_global = id(cfg_integral_max_global).state;
 
         float aqi_curr = id(sensor_aqi_value).state;
-        float aqi_target_delta = (float)id(diag_auto_target_delta).state;
-        float aqi_deadband = (float)id(cfg_aqi_deadband).state;
+        float aqi_target = id(cfg_aqi_target).state;
+        float aqi_target_delta = aqi_curr - aqi_target;
+        if (aqi_target_delta < 0) aqi_target_delta = 0;
+
+        float integral_damping_zone = id(cfg_integral_damping_zone).state;
         float delta = aqi_curr - aqi_prev;
 
         if (!time_valid) {
@@ -132,23 +129,51 @@ public:
                 boost_derivative -= time * boost_derivative_decay;
             }
 
-            if (aqi_target_delta > aqi_deadband) {
-                // serious error, boost_integral needed
-                boost_integral += time * aqi_target_delta * boost_integral_jump;
-            } else {
-                // small error, boost_integral should decay
-                boost_integral -= time * boost_integral_decay;
-            }
-
             // always needed, boost_proportional
             boost_proportional = aqi_target_delta * boost_proportional_jump;
 
-            // clamp boosts
+            // Integral part damper: when in the damping zone
+            // dynamic_integral_cap is calculated.
+            // Accumulation and decay of integral term targets dynamic_integral_cap.
+            // When error is out of the damping zone, dynamic cap equals integral_max_global
+            // When error is in a damping zone, dynamic cap is lerped between INTEGRAL_MIN_CAP_IN_ZONE
+            // and integral_max_global
+
+            // 1. Determine the 'dynamic_integral_cap'
+            if (aqi_target_delta >= integral_damping_zone) {
+                dynamic_integral_cap = integral_max_global;
+            } else if (aqi_target_delta > 0 && aqi_target_delta < integral_damping_zone) {
+                float zone_pos = aqi_target_delta / integral_damping_zone;
+                dynamic_integral_cap = INTEGRAL_MIN_CAP_IN_ZONE +
+                                       (integral_max_global - INTEGRAL_MIN_CAP_IN_ZONE) * zone_pos;
+                dynamic_integral_cap = std::clamp(dynamic_integral_cap, INTEGRAL_MIN_CAP_IN_ZONE, integral_max_global);
+            } else { // aqi_target_delta <= 0
+                dynamic_integral_cap = 0.0f; // Ensure it decays fully towards 0
+            }
+            dynamic_integral_cap = std::max(0.0f, dynamic_integral_cap); // Ensure non-negative
+
+            // 2. Update 'boost_integral' with controlled accumulation and decay
+            float integral_rate_of_change = 0.0f;
+            if (aqi_target_delta > 0) {
+                if (boost_integral < dynamic_integral_cap) {
+                    integral_rate_of_change = time * aqi_target_delta * boost_integral_jump;
+                } else {
+                    // When above the dynamic cap do not accumulate; start decaying
+                    integral_rate_of_change = -time * boost_integral_decay;
+                }
+            } else { // aqi_target_delta <= 0
+                // When below the target, start decaying
+                integral_rate_of_change = -time * boost_integral_decay;
+            }
+            boost_integral += integral_rate_of_change;
+
+            // 3. Sanitize 'boost_integral' (above 0)
+            boost_integral = std::max(0.0f, boost_integral);
+
+            // clamp boosts (for P and D)
             boost_proportional = std::clamp(boost_proportional, 0.0f, 100.0f);
-            boost_integral = std::clamp(boost_integral, 0.0f, 50.0f);
             boost_derivative = std::clamp(boost_derivative, 0.0f, 30.0f);
         }
-
 
         boosted_fan_speed = fan_min + boost_proportional + boost_integral + boost_derivative;
         boosted_fan_speed = std::clamp(boosted_fan_speed, 0.0f, fan_max);
@@ -157,57 +182,13 @@ public:
         aqi_prev = aqi_curr;
         prev_calculation_timestamp = now;
 
+        id(diag_dynamic_integral_cap).publish_state(dynamic_integral_cap);
         id(diag_fan_speed_auto).publish_state(boosted_fan_speed);
-        id(diag_auto_fan_boost_derivative).publish_state(boost_derivative);
-        id(diag_auto_fan_boost_integral).publish_state(boost_integral);
-        id(diag_auto_fan_boost_proportional).publish_state(boost_proportional);
+        id(diag_boost_derivative).publish_state(boost_derivative);
+        id(diag_boost_integral).publish_state(boost_integral);
+        id(diag_boost_proportional).publish_state(boost_proportional);
         id(diag_auto_prev_delta).publish_state(delta);
     }
 
-    void Control() {
-        if (!IsWarm()) {
-            auto fan_mode = id(ui_mode_select).current_option();
-            if (fan_mode == "MANUAL") {
-                SetTransition(true);
-                ESP_LOGI("main", "Control, speed=idle (warmup MANUAL)");
-                id(fans_speed).turn_on().set_speed(30).perform();
-            } else {
-                ESP_LOGI("main", "Control, speed=idle (warmup AUTO)");
-                SetTransition(true);
-                id(fans_speed).speed = 30;
-                id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
-            }
-            return;
-        }
-
-        auto speed = GetFanSpeed();
-        if (speed <= 0.0) {
-            ESP_LOGI("main", "Control, speed=OFF");
-            if (id(fans_speed).state) { // Only turn off if it's currently on
-                id(fans_speed).turn_off().perform();
-            }
-        } else {
-            if (id(ui_mode_select).current_option() == "AUTO") {
-                id(fans_speed).state = true;
-
-                if (id(fans_speed).get_preset_mode() != "AUTO") {
-                    ESP_LOGI("main", "Control, speed=%f (AUTO starting...)", speed);
-                    SetTransition(true);
-                    id(fans_speed).speed = speed;
-                    id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
-                } else {
-                    ESP_LOGI("main", "Control, speed=%f (AUTO continued)", speed);
-                    if ((id(fans_speed).speed != floor(speed))) {
-                        SetTransition(true);
-                        id(fans_speed).speed = speed;
-                        id(fans_speed).turn_on().set_preset_mode("AUTO").perform();
-                    }
-                }
-            } else { // ui_mode_select is "MANUAL"
-                ESP_LOGI("main", "Control, speed=%f (manual)", speed);
-                // Set speed directly. This implicitly clears any preset.
-                id(fans_speed).turn_on().set_speed(speed).perform();
-            }
-        }
-    }
+    
 };

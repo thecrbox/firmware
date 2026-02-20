@@ -58,9 +58,10 @@ packages:
     unlocker: unlock_purifier_config_auto_advanced,
     min: 0.000, max: 0.050, step: 0.001, initial: "0.015f",
     group: sorting_group_purifier_config_auto_advanced, weight: 14, device_id: device_purifier } }
-  locked_cfg_aqi_deadband: !include { file: thebox_guarded_number.yaml, vars: {
-    name: "AUTO: AQI deadband",
-    id: cfg_aqi_deadband,
+  locked_cfg_integral_max_global: !include { file: thebox_guarded_number.yaml, vars: {
+    name: "AUTO: Max Integral global cap",
+    id: cfg_integral_max_global,
     unlocker: unlock_purifier_config_auto_advanced,
-    min: 0.0, max: 50.0, step: 1, initial: "5",
+    min: 15.0, max: 60.0, step: 1.0, initial: "45.0f",
     group: sorting_group_purifier_config_auto_advanced, weight: 15, device_id: device_purifier } }
+

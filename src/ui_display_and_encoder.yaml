@@ -277,7 +277,6 @@ script:
                   } else if (id(focus_auto_config).current_option() == "config_auto_night_fan") {
                     id(cfg_fan_auto_night).make_call()
                       .set_value(std::clamp(id(cfg_fan_auto_night).state + step, 0.0f, 100.0f)).perform();
-                    PID::Instance().Control();
                   } else if (id(focus_auto_config).current_option() == "config_auto_night_rgb") {
                     id(cfg_brightness_auto_night).make_call()
                       .set_value(std::clamp(id(cfg_brightness_auto_night).state + step, 0.0f, 100.0f)).perform();
@@ -286,7 +285,6 @@ script:
                   } else if (id(focus_auto_config).current_option() == "config_auto_day_fan") {
                     id(cfg_fan_auto_day).make_call()
                       .set_value(std::clamp(id(cfg_fan_auto_day).state + step, 0.0f, 100.0f)).perform();
-                    PID::Instance().Control();
                   } else if (id(focus_auto_config).current_option() == "config_auto_day_rgb") {
                     id(cfg_brightness_auto_day).make_call()
                       .set_value(std::clamp(id(cfg_brightness_auto_day).state + step, 0.0f, 100.0f)).perform();
@@ -301,7 +299,6 @@ script:
                   } else if (id(focus_manual).current_option() == "config_manual_fan") {
                     id(cfg_fan_manual).make_call()
                       .set_value(std::clamp(id(cfg_fan_manual).state + step, 0.0f, 100.0f)).perform();
-                    PID::Instance().Control();
                   } else if (id(focus_manual).current_option() == "config_manual_rgb") {
                     id(cfg_brightness_manual).make_call()
                       .set_value(std::clamp(id(cfg_brightness_manual).state + step, 0.0f, 100.0f)).perform();
@@ -425,6 +422,7 @@ select:
     on_value:
       then:
         - lambda: |-
+            thebox::StateController::get().on_mode_update(x);
             if (!id(ui_inputs_locked)) {
               ESP_LOGI("UI", "ui_mode_select.on_value, ui_mode_select='%s'; i='%d'", id(ui_mode_select).current_option().c_str(), i);
               id(ui_display_mode_page).execute();

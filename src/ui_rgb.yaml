@@ -372,7 +372,7 @@ script:
           LightState *dual_strip = id(rgb_profile_dual_strip);
           LightState *fans = id(rgb_profile_fans);
 
-          auto selected_option = id(cfg_rgb_mode).state;
+          auto selected_option = id(cfg_rgb_mode).current_option();
 
           if (selected_option == "Single LED Strip (30) + Clone") {
             active = strip;

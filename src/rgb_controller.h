@@ -71,7 +71,6 @@ inline void apply_rgb_state() {
     }
 
     using std::isnan;
-    // WARMUP_DURATION_S is now globally available via include
     bool is_warming_up = millis() < (aqifx::kWarmupDurationS * 1000);
     bool aqi_available = rgb_config.sensor_aqi_value->has_state() && !isnan(rgb_config.sensor_aqi_value->state);
     bool show_boot_animation = is_warming_up && rgb_config.cfg_rgb_boot_animation->state;

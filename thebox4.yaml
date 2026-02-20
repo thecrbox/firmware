@@ -23,6 +23,7 @@ esphome:
       - "-DWARMUP_DURATION_S=${WARMUP_DURATION_S}"
 
   includes:
+    - src/state_controller.h
     - src/purifier_pid.h
 
 external_components:

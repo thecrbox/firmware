@@ -41,65 +41,13 @@ fan:
 #            ESP_LOGI("UI", "'fans_speed' state changed to %s", x ? "ON" : "OFF");
 #
     on_preset_set:
-      then:
-        - lambda: |-
-            if (x == "AUTO") {
-              ESP_LOGI("UI", "'fans_speed' preset=AUTO --> UI AUTO");
-              if (id(ui_mode_select).current_option() != "AUTO") {
-                id(ui_mode_select).publish_state("AUTO");
-              }
-            } else {
-              ESP_LOGI("UI", "'fans_speed' preset='%s' --> UI MANUAL (preset cleared or invalid)", x.c_str());
-              if (id(ui_mode_select).current_option() != "MANUAL") {
-                id(ui_mode_select).publish_state("MANUAL");
-              }
-            }
+      - lambda: thebox::StateController::get().on_fan_update();
     on_speed_set:
-      - lambda: |-
-          // If fan is off, ignore speed changes
-          if (!id(fans_speed).state) {
-            ESP_LOGI("UI", "'fans_speed' on_speed_set ignored, fan is OFF");
-            return;
-          }
-          
-          if (PID::Instance().ClearTransition()) {
-            ESP_LOGI("UI", "'fans_speed' on_speed_set ignored, PID in transition");
-            return;
-          }
-
-          auto mode = id(ui_mode_select).current_option();
-          if (mode == "AUTO") {
-            ESP_LOGI("UI", "'fans_speed' speed set while UI_AUTO --> switch to UI_MANUAL and save manual speed");
-            id(cfg_fan_manual).publish_state(x);
-            id(ui_mode_select).publish_state("MANUAL");
-          } else if (mode == "MANUAL") {
-            ESP_LOGI("UI", "'fans_speed' speed set while UI_MANUAL --> save manual speed");
-            id(cfg_fan_manual).publish_state(x);
-          } else {
-             ESP_LOGI("UI", "'fans_speed' speed set while UI_OFF --> no-op");
-          }
+      - lambda: thebox::StateController::get().on_fan_update();
     on_turn_on:
-      - lambda: |-
-          static bool first_on = true;
-          if (first_on) {
-            ESP_LOGI("UI", "'fans_speed' turned ON for the first time --> no-op");
-            first_on = false;
-            return;
-          }
-
-          if (id(fans_speed).get_preset_mode() == "AUTO") {
-            ESP_LOGI("UI", "'fans_speed' turned ON --> UI_AUTO");
-            id(ui_mode_select).publish_state("AUTO");
-          } else {
-            ESP_LOGI("UI", "'fans_speed' turned ON --> UI_MANUAL");
-            id(ui_mode_select).publish_state("MANUAL");
-          }
+      - lambda: thebox::StateController::get().on_fan_update();
     on_turn_off:
-      - lambda: |-
-          ESP_LOGI("UI", "'fans_speed' turned OFF --> UI_OFF");
-          if (id(ui_mode_select).current_option() != "OFF") {
-            id(ui_mode_select).publish_state("OFF");
-          }
+      - lambda: thebox::StateController::get().on_fan_update();
       
 
 
@@ -301,6 +249,8 @@ number:
     unit_of_measurement: "%"
     icon: "mdi:fan"
     optimistic: true
+    on_value:
+      - lambda: thebox::StateController::get().on_manual_speed_update(x);
     restore_value: true
     min_value: 1.0
     max_value: 100.0
@@ -415,4 +365,4 @@ interval:
     then:
       - lambda: |-
           PID::Instance().Calculate();
-          PID::Instance().Control();
+          thebox::StateController::get().on_pid_update();

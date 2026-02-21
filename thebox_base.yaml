@@ -1,0 +1,69 @@
+# Base configuration for thebox devices
+
+substitutions:
+  # Expected from wrapper files:
+  # device_name: "box2-xxxx"
+  # device_setup_ssid: "box2-xxxx"
+  # device_setup_password: "password"
+  # sensor_type: "fake" or "real" or "real"
+
+  # Default UI display type, can be overridden by wrapper files
+  UI_DISPLAY_TYPE: "SH1106 128x64"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${device_name}
+  min_version: 2025.5.0
+  name_add_mac_suffix: false
+
+  project:
+    name: thecrbox.thebox2
+    version: "1.4.0"
+
+  platformio_options:
+    build_flags:
+      - "-DUSE_DISPLAY_QR_CODE"
+      - "-DWARMUP_DURATION_S=${WARMUP_DURATION_S}"
+
+  includes:
+    - src/state_controller.h
+    - src/purifier_pid.h
+
+external_components:
+  - source:
+      type: local
+      path: src/components
+
+packages:
+  - !include src/board.yaml
+  - !include src/system_settings.yaml
+  - !include src/network.yaml
+  - !include src/purifier.yaml
+  - !include src/ui_common.yaml
+  - !include src/ui_display_and_encoder.yaml
+  - !include src/ui_rgb.yaml
+  - !include src/_sensor_internal.yaml
+
+  # Conditional sensor include based on sensor_type substitution
+  - !include
+      file: src/sensor_fake.yaml
+      condition: "${sensor_type == 'fake'}"
+  - !include
+      file: src/sensor_pmsx0003.yaml
+      condition: "${sensor_type == 'real'}"
+  - !include
+      file: src/sensor_sen5x.yaml
+      condition: "${sensor_type == 'real'}"
+
+logger:
+  level: INFO
+  tx_buffer_size: 160
+#  baud_rate: 0
+#  logs:
+#    # main: DEBUG
+#    wifi: NONE
+#    esp-idf: NONE
+
+preferences:
+  # TODO: consider increasing further after we're done with development
+  flash_write_interval: 1min

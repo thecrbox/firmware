@@ -29,7 +29,9 @@ public:
 
     // Called when the fan component is changed from HA/API
     void on_fan_update() {
-        if (is_syncing_) return;
+        if (is_syncing_ || id(is_booting)) {
+            return;
+        }
         AutoLock lock(*this);
         ESP_LOGI("state", "on_fan_update triggered");
 
@@ -94,7 +96,9 @@ public:
 
     // Called when the manual fan speed number is changed from HA/UI
     void on_manual_speed_update(float new_speed) {
-        if (is_syncing_) return;
+        if (is_syncing_ || id(is_booting)) {
+            return;
+        }
         AutoLock lock(*this);
         ESP_LOGI("state", "on_manual_speed_update triggered with speed %.0f", new_speed);
         

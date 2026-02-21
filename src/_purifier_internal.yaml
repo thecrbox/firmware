@@ -1,5 +1,6 @@
 substitutions:
   WARMUP_DURATION_S: '10'
+  BOOT_GUARD_S: '1'
 
 esphome:
   devices:

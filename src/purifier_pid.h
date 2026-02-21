@@ -27,10 +27,6 @@ protected:
 
     }
 
-    bool IsWarm() {
-        return millis() > (WARMUP_DURATION_S * 1000);
-    }
-
     void SetTransition(bool value) {
         transition = value;
     }
@@ -53,6 +49,10 @@ public:
 
     float GetAutoFanSpeed() {
         return boosted_fan_speed > 0 ? boosted_fan_speed : 2.0f;
+    }
+
+    bool IsWarm() {
+        return millis() > (WARMUP_DURATION_S * 1000);
     }
 
     void Calculate() {

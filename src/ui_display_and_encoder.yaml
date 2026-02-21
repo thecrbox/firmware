@@ -407,13 +407,13 @@ script:
 
 select:
   - platform: template
-    name: "UI: Interface Mode"
+    name: "Mode"
     id: ui_mode_select
     device_id: device_interface
     web_server:
       sorting_group_id: sorting_group_interface
     optimistic: true
-    internal: true
+    internal: false
     restore_value: true
     options:
       - "OFF"

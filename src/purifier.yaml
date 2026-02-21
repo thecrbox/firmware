@@ -1,3 +1,15 @@
+esphome:
+  on_boot:
+    priority: -1000 # Very late in the boot sequence
+    then:
+      - delay: ${BOOT_GUARD_S}s
+      - lambda: id(is_booting) = false;
+
+globals:
+  - id: is_booting
+    type: bool
+    initial_value: 'true'
+
 switch:
   - platform: template
     id: unlock_purifier_config_auto_advanced

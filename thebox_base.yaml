@@ -43,6 +43,7 @@ packages:
   - !include src/ui_display_and_encoder.yaml
   - !include src/ui_rgb.yaml
   - !include src/_sensor_internal.yaml
+  - qr_code:
 
   # Conditional sensor include based on sensor_type substitution
   - !include

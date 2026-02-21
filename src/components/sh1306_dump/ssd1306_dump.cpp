@@ -40,7 +40,7 @@ namespace esphome {
         }
         void DUMPINGI2CSSD1306::command(uint8_t value) { this->write_byte(0x00, value); }
     void HOT DUMPINGI2CSSD1306::write_display_data() {
-        const bool dumping = dump_every_flush_ || dump_once_;
+        const bool dumping = dump_once_;
         if (dumping) {
             dump_once_ = false;  // consume one-shot request
             this->log_hex_header_footer_(true);

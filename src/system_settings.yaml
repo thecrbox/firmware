@@ -24,18 +24,5 @@ switch:
       - delay: 15s
       - switch.turn_off: unlock_system_advanced
 
-button:
-  - platform: template
-    name: "Display Dump Trigger"
-    id: display_dump_trigger_btn
-    device_id: device_system
-    web_server:
-      sorting_group_id: sorting_group_system
-      sorting_weight: 50
-    on_press:
-      - lambda: |-
-          auto display = id(oled);
-          if (display != nullptr) {
-            display->request_dump();
-          }
+
 

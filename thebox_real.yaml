@@ -1,9 +1,12 @@
-!include {
-  file: thebox_base.yaml,
-  vars: {
-    device_name: "box2-0003",
-    device_setup_ssid: "box2-0003",
-    device_setup_password: "12345678",
-    sensor_type: "real"
-  }
-}
+packages:
+  - !include {
+      file: thebox_base.yaml,
+      vars: {
+        device_name: "box2-0003",
+        device_setup_ssid: "box2-0003",
+        device_setup_password: "12345678",
+        sensor_type: "real",
+        UI_DISPLAY_TYPE: "sh1106 128x64"
+      }
+    }
+  - !include src/display_real.yaml

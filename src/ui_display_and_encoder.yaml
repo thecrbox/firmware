@@ -38,11 +38,6 @@ globals:
     initial_value: 'false'
 
 interval:
-#  - interval: 10s
-#    then:
-#      - lambda: |-
-#          id(oled).request_dump();
-
   - interval: 100ms
     then:
       - script.execute: ui_tick
@@ -498,8 +493,8 @@ binary_sensor:
     name: "UI: Button"
     device_id: device_interface
     internal: true
-    # TODO make special clicks (provision, force offline) more reliable / easier to use
-    # maybe we don't need the very long click at all?
+
+    # do we really need offline mode?
     on_multi_click:
       - timing:
           - ON for at least 10s
@@ -565,7 +560,7 @@ sensor:
             id: ui_on_rotate
             dir: -1
     filters:
-      - throttle: 0.20s
+       - throttle: 0.20s
 
 font:
   - file: "fonts/font_tiny5.bdf"
@@ -574,14 +569,12 @@ font:
     id: f05_tinyregular
   - file: "fonts/u8g2_squeezed_regular_6.bdf"
     id: f06_u8g2_squeezed
-
   # lucida 08
   - file: "fonts/luRS08.bdf"
     id: f08_lucidasans_regular
     glyphsets:
       - GF_Latin_Kernel
     glyphs: [µ,³]
-
   # lucida 10
   - file: "fonts/luRS10.bdf"
     id: f10_lucidasans_regular
@@ -596,31 +589,3 @@ qr_code:
   - id: device_ip_qr_code
     value: ""
     ecc: LOW
-
-display:
-  - platform: ${UI_DISPLAY_PLATFORM}
-    model: ${UI_DISPLAY_TYPE}
-    i2c_id: bus_a
-    address: 0x3C
-    id: oled
-    update_interval: 200ms
-    contrast: 100%
-    brightness: 100%
-
-    pages:
-      - id: page_auto
-        lambda: ui::draw_page_auto(it);
-      - id: page_auto_config
-        lambda: ui::draw_page_auto_config(it);
-      - id: page_auto_preview
-        lambda: ui::draw_page_auto_preview(it);
-      - id: page_manual
-        lambda: ui::draw_page_manual(it);
-      - id: page_off
-        lambda: ui::draw_page_off(it);
-      - id: page_init
-        lambda: ui::draw_page_init(it);
-
-        
-          
-      

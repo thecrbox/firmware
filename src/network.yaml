@@ -53,9 +53,7 @@ web_server:
   version: 3
   local: false
   id: mywebserver
-#  auth:
-#    username:  !secret webserver_user
-#    password: !secret webserver_pass
+
 
 http_request:
   id: network_http_client

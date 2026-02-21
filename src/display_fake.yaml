@@ -1,0 +1,43 @@
+display:
+  - platform: sh1306_dump
+    model: ${UI_DISPLAY_TYPE}
+    i2c_id: bus_a
+    address: 0x3C
+    id: oled
+    update_interval: 100ms
+    contrast: 100%
+    brightness: 100%
+    pages:
+      - id: page_auto
+        lambda: ui::draw_page_auto(it);
+      - id: page_auto_config
+        lambda: ui::draw_page_auto_config(it);
+      - id: page_auto_preview
+        lambda: ui::draw_page_auto_preview(it);
+      - id: page_manual
+        lambda: ui::draw_page_manual(it);
+      - id: page_off
+        lambda: ui::draw_page_off(it);
+      - id: page_init
+        lambda: ui::draw_page_init(it);
+    dump_target_text_sensor: display_hex_dump
+
+text_sensor:
+  - platform: template
+    name: "Display Hex Dump"
+    id: display_hex_dump
+
+button:
+  - platform: template
+    name: "Display Dump Trigger"
+    id: display_dump_trigger_btn
+    device_id: device_system
+    web_server:
+      sorting_group_id: sorting_group_system
+      sorting_weight: 50
+    on_press:
+      - lambda: |-
+          auto* display = static_cast<esphome::ssd1306_dump::DUMPINGI2CSSD1306*>(id(oled));
+          if (display != nullptr) {
+            display->request_dump();
+          }

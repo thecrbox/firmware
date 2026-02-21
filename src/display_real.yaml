@@ -1,0 +1,22 @@
+display:
+  - platform: ssd1306_i2c
+    model: ${UI_DISPLAY_TYPE}
+    i2c_id: bus_a
+    address: 0x3C
+    id: oled
+    update_interval: 100ms
+    contrast: 100%
+    brightness: 100%
+    pages:
+      - id: page_auto
+        lambda: ui::draw_page_auto(it);
+      - id: page_auto_config
+        lambda: ui::draw_page_auto_config(it);
+      - id: page_auto_preview
+        lambda: ui::draw_page_auto_preview(it);
+      - id: page_manual
+        lambda: ui::draw_page_manual(it);
+      - id: page_off
+        lambda: ui::draw_page_off(it);
+      - id: page_init
+        lambda: ui::draw_page_init(it);

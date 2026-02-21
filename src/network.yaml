@@ -83,7 +83,7 @@ script:
           global_preferences->sync();
       - script.execute: ui_force_post_provision
       - delay: 3000ms
-      - switch.turn_on: device_restart_switch
+      - button.press: device_restart_action
 
   - id: _network_update_state
     then:

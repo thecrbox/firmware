@@ -1,0 +1,41 @@
+esphome:
+  devices:
+    - id: device_system
+      name: "System"
+
+web_server:
+  sorting_groups:
+    - id: sorting_group_system
+      name: "System"
+      sorting_weight: 98
+
+switch:
+  - platform: template
+    id: unlock_system_advanced
+    name: "Unlock advanced settings (15s)"
+    icon: "mdi:lock"
+    optimistic: true
+    restore_mode: always_off
+    device_id: device_system
+    web_server:
+      sorting_group_id: sorting_group_system
+      sorting_weight: 1
+    turn_on_action:
+      - delay: 15s
+      - switch.turn_off: unlock_system_advanced
+
+button:
+  - platform: template
+    name: "Display Dump Trigger"
+    id: display_dump_trigger_btn
+    device_id: device_system
+    web_server:
+      sorting_group_id: sorting_group_system
+      sorting_weight: 50
+    on_press:
+      - lambda: |-
+          auto display = id(oled);
+          if (display != nullptr) {
+            display->request_dump();
+          }
+

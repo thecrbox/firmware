@@ -33,6 +33,7 @@ external_components:
 
 packages:
   - !include src/board.yaml
+  - !include src/system_settings.yaml
   - !include src/network.yaml
   - !include src/purifier.yaml
   - !include src/ui_common.yaml

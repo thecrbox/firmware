@@ -496,24 +496,25 @@ binary_sensor:
 
     # do we really need offline mode?
     on_multi_click:
+#      - timing:
+#          - ON for at least 10s
+#          - OFF for at least 0.05s
+#        then:
+#          - if:
+#              condition:
+#                lambda: 'return id(network_hotspot_active);'
+#              then:
+#                - logger.log:
+#                    level: INFO
+#                    format: "UI: ui_on_very_long_click; enabling offline mode"
+#                - script.execute: network_set_offline
+#              else:
+#                - logger.log:
+#                    level: DEBUG
+#                    format: "UI: ui_on_very_long_click; hotspot inactive, ignoring"
       - timing:
-          - ON for at least 10s
-          - OFF for at least 0.05s
-        then:
-          - if:
-              condition:
-                lambda: 'return id(network_hotspot_active);'
-              then:
-                - logger.log:
-                    level: INFO
-                    format: "UI: ui_on_very_long_click; enabling offline mode"
-                - script.execute: network_set_offline
-              else:
-                - logger.log:
-                    level: DEBUG
-                    format: "UI: ui_on_very_long_click; hotspot inactive, ignoring"
-      - timing:
-          - ON for 4s to 9.9s
+          #- ON for 4s to 9.9s
+          - ON for at least 4s
           - OFF for at least 0.05s
         then:
           - logger.log:

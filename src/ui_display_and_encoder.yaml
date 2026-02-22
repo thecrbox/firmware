@@ -516,8 +516,10 @@ binary_sensor:
           - ON for 4s to 9.9s
           - OFF for at least 0.05s
         then:
-          - script.execute: ui_force_setup_mode
-          - script.execute: network_set_hotspot
+          - logger.log:
+              level: INFO
+              format: "UI: ui_on_very_long_click; factory reset"
+          - button.press: factory_reset_action
       - timing:
           - ON for 0.3s to 3.9s
           - OFF for at least 0.05s

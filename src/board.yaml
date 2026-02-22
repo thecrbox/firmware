@@ -33,45 +33,6 @@ status_led:
     number: GPIO23
     inverted: false
 
-packages:
-  guarded_factory_reset: !include {
-    file: thebox_guarded_button.yaml,
-    vars: {
-      name: "Factory Reset",
-      id: factory_reset_btn,
-      unlocker: unlock_system_advanced,
-      target_button_id: factory_reset_action,
-      icon: "mdi:delete-restore",
-      group: sorting_group_system,
-      weight: 101,
-      device_id: device_system,
-    }
-  }
-  guarded_device_restart: !include {
-    file: thebox_guarded_button.yaml,
-    vars: {
-      name: "Device Restart",
-      id: device_restart_btn,
-      unlocker: unlock_system_advanced,
-      target_button_id: device_restart_action,
-      icon: "mdi:restart",
-      group: sorting_group_system,
-      weight: 102,
-      device_id: device_system,
-    }
-  }
-
-button:
-  # Internal buttons that perform the actual actions
-  - platform: factory_reset
-    id: factory_reset_action
-    name: "Factory Reset Action"
-    internal: true
-  - platform: restart
-    id: device_restart_action
-    name: "Device Restart Action"
-    internal: true
-
 
 esp32:
   board: esp32dev

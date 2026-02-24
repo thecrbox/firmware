@@ -45,17 +45,6 @@ packages:
   - !include src/_sensor_internal.yaml
   - qr_code:
 
-  # Conditional sensor include based on sensor_type substitution
-  - !include
-      file: src/sensor_fake.yaml
-      condition: "${sensor_type == 'fake'}"
-  - !include
-      file: src/sensor_pmsx0003.yaml
-      condition: "${sensor_type == 'real'}"
-  - !include
-      file: src/sensor_sen5x.yaml
-      condition: "${sensor_type == 'real'}"
-
 logger:
   level: INFO
   tx_buffer_size: 160

@@ -169,6 +169,7 @@ script:
                       level: INFO
                       format: "UI: ui_on_click; toggling focus MANUAL"
                   - select.next: focus_manual
+                  - script.execute: ui_on_not_idle
             - if:
                 condition:
                   - lambda: 'return id(ui_mode_select).current_option() == "OFF";'
@@ -177,6 +178,7 @@ script:
                       level: INFO
                       format: "UI: ui_on_click; toggling focus OFF"
                   - select.next: focus_off
+                  - script.execute: ui_on_not_idle
 
   # long click - toggle mode
   - id: ui_on_long_click

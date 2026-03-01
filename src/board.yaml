@@ -4,13 +4,13 @@ substitutions:
   SENSOR_UART_ENABLE: GPIO5
 
   SENSOR_SENSIRON_BUS_ID: bus_b
+  SENSOR_PRESSURE_BUS_ID: bus_a
+  DISPLAY_BUS_ID: bus_a
 
   UI_ENCODER_SW: GPIO34
   UI_ENCODER_A: GPIO36
   UI_ENCODER_B: GPIO39
 
-  #UI_DISPLAY_PLATFORM: "ssd1306_i2c"
-  UI_DISPLAY_PLATFORM: "sh1306_dump"
   # big with encoder
   #UI_DISPLAY_TYPE: "SH1106 128x64"
   # small in box
@@ -22,10 +22,16 @@ substitutions:
   UI_DISPLAY_I2C_SCL: GPIO18
 
 i2c:
+  - id: bus_a
+    sda: ${UI_DISPLAY_I2C_SDA}
+    scl: ${UI_DISPLAY_I2C_SCL}
+    scan: true
+    frequency: 400kHz
+
   - id: bus_b
     sda: GPIO12
     scl: GPIO13
-    scan: false
+    scan: true
 
 status_led:
   id: status_indicator_led
@@ -38,6 +44,8 @@ esp32:
   board: esp32dev
   framework:
     type: esp-idf
+    advanced:
+      minimum_chip_revision: "3.1"
 
 
 

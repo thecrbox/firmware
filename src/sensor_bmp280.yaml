@@ -1,0 +1,61 @@
+#sensor:
+#  - platform: bmp280_i2c
+#    id: bmp280_in
+#    i2c_id: ${SENSOR_PRESSURE_BUS_ID}
+#    address: 0x76
+#    update_interval: 100ms
+#    pressure:
+#      name: "BMP Pressure inside"
+#      oversampling: 16x
+#      id: bmp280_in_pressure
+#      internal: true
+#      filters:
+#        - sliding_window_moving_average:
+#            window_size: 10
+#            send_every: 1
+#      on_value:
+#        then:
+#          - component.update: bmp280_out
+#
+#  - platform: bmp280_i2c
+#    id: bmp280_out
+#    i2c_id: ${SENSOR_PRESSURE_BUS_ID}
+#    address: 0x77
+#    update_interval: never
+##    update_interval: 300ms
+#    pressure:
+#      name: "BMP Pressure outside"
+#      oversampling: 16x
+#      id: bmp280_out_pressure
+#      internal: true
+#      filters:
+#        - sliding_window_moving_average:
+#            window_size: 10
+#            send_every: 1
+#      on_value:
+#        then:
+#          - component.update: pressure_dif
+#          - component.update: pressure_dif_slow
+#
+#
+#  - platform: template
+#    id: pressure_dif
+#    name: "Pressure DIF"
+#    lambda: 'return id(bmp280_in_pressure).state - id(bmp280_out_pressure).state;'
+#    update_interval: never
+##    update_interval: 300ms
+#    filters:
+#      - sliding_window_moving_average:
+#          window_size: 20
+#          send_every: 5
+#
+#  - platform: template
+#    id: pressure_dif_slow
+#    name: "Pressure DIF slow"
+#    lambda: 'return id(bmp280_in_pressure).state - id(bmp280_out_pressure).state;'
+#    update_interval: never
+#    #    update_interval: 300ms
+#    filters:
+#      - sliding_window_moving_average:
+#          window_size: 50
+#          send_every: 5

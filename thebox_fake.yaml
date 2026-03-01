@@ -16,3 +16,5 @@ packages:
     file: src/sensor_pmsx0003.yaml
   - !include
     file: src/sensor_sen5x.yaml
+  - !include
+    file: src/sensor_bmp280.yaml

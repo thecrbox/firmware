@@ -1,7 +1,7 @@
 display:
   - platform: sh1306_dump
     model: ${UI_DISPLAY_TYPE}
-    i2c_id: bus_a
+    i2c_id: ${DISPLAY_BUS_ID}
     address: 0x3C
     id: oled
     update_interval: 100ms

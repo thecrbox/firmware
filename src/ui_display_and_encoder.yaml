@@ -12,13 +12,6 @@ esphome:
           then:
             - script.execute: ui_force_setup_mode
 
-i2c:
-  - id: bus_a
-    sda: ${UI_DISPLAY_I2C_SDA}
-    scl: ${UI_DISPLAY_I2C_SCL}
-    scan: false
-    frequency: 400kHz
-
 globals:
   - id: ui_tick_auto_idle
     type: int

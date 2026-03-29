@@ -10,6 +10,11 @@ substitutions:
   # Default UI display type, can be overridden by wrapper files
   UI_DISPLAY_TYPE: "SH1106 128x64"
 
+  # default UI-related times
+  WARMUP_DURATION_S: '10'
+  UPDATE_INTERVAL_NORMAL_MS: '100'
+  UPDATE_INTERVAL_BOOT_MS: '100'
+
 esphome:
   name: ${device_name}
   friendly_name: ${device_name}
@@ -24,10 +29,13 @@ esphome:
     build_flags:
       - "-DUSE_DISPLAY_QR_CODE"
       - "-DWARMUP_DURATION_S=${WARMUP_DURATION_S}"
+      - "-DUPDATE_INTERVAL_NORMAL_MS=${UPDATE_INTERVAL_NORMAL_MS}"
+      - "-DUPDATE_INTERVAL_BOOT_MS=${UPDATE_INTERVAL_BOOT_MS}"
 
   includes:
     - src/state_controller.h
     - src/purifier_pid.h
+    - src/board.h
 
 external_components:
   - source:

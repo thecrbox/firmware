@@ -21,6 +21,8 @@ switch:
       sorting_group_id: sorting_group_system
       sorting_weight: 1
     turn_on_action:
+#      - lambda: |-
+#          id(myota).set_auth_password("new password");
       - delay: 15s
       - switch.turn_off: unlock_system_advanced
 

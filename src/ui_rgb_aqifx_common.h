@@ -7,8 +7,6 @@
 
 namespace aqifx {
 
-static constexpr int kWarmupDurationS = 10; // Define WARMUP_DURATION_S here
-
 inline float clampf(float x, float lo, float hi) { return x < lo ? lo : (x > hi ? hi : x); }
 
 template <typename Mapper>

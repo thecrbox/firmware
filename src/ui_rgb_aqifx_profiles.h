@@ -6,10 +6,13 @@
 #include <numeric> // Added for std::iota
 #include "esphome/components/light/addressable_light.h"
 #include "ui_rgb_aqifx_common.h"
+#include "board.h"
 
 using namespace esphome;
 
 namespace aqifx {
+
+    static const float kGreenThresh = 40.0f;
 
 inline std::vector<std::vector<int>> generate_fan_segment_description(int leds_per_seg) {
   std::vector<std::vector<int>> segment_desc;
@@ -87,47 +90,30 @@ inline auto make_strip_clone_layout() {
                             });
 }
 
-inline void aqi_boot_sweep_strip_clone(esphome::light::AddressableLight &it, float fanlevel, float max_aqi_value, bool reset_animation) {
-  const float kGreenThresh = 40.0f;
+inline void aqi_boot_sweep_strip_clone(esphome::light::AddressableLight &it, float fanlevel, float max_aqi_value) {
+  static float f_step = 0;
 
-  static int step = -1;
-  static float delta_f_cached_strip_clone = -1.0f;
-  static float prev_max_aqi_strip_clone = -1.0f;
-  
-  if (reset_animation || prev_max_aqi_strip_clone != max_aqi_value) {
-    step = -1;
-    delta_f_cached_strip_clone = -1.0f;
-    prev_max_aqi_strip_clone = max_aqi_value;
-  }
-
-  if (delta_f_cached_strip_clone < 0) {
-      delta_f_cached_strip_clone = (max_aqi_value) * 0.05f / (aqifx::kWarmupDurationS / 2);
-  }
-  
-  step = round((float)step + delta_f_cached_strip_clone);
-
-  const int period = static_cast<int>(2 * max_aqi_value);
-  int t = step % period;
-  float v = (t <= max_aqi_value) ? static_cast<float>(t) : (2 * max_aqi_value - static_cast<float>(t));
+  auto f_aqi_per_iteration = (max_aqi_value * 2) * Config::kUpdateIntervalBoot_s / (float)Config::kWarmupDurationS;
+  f_step += f_aqi_per_iteration;
+  int cycle_aqi = lround(f_step) % lround(2 * max_aqi_value);
+  float f_aqi = (cycle_aqi <= max_aqi_value) ? cycle_aqi : (2 * max_aqi_value - cycle_aqi);
 
   const auto layout = make_strip_clone_layout();
   aqifx::render(it, layout,
-                 v, fanlevel,
-                 max_aqi_value, max_aqi_value,
-                 /*cut_value*/ v,
-                 /*green_threshold*/ kGreenThresh);
+                f_aqi, fanlevel,
+                max_aqi_value, max_aqi_value,
+                /*cut_value*/ f_aqi,
+                aqifx::kGreenThresh);
   it.schedule_show();
 }
 
 inline void aqi_state_strip_clone(esphome::light::AddressableLight &it, float value, float fanlevel, float max_aqi_value) {
-  const float kGreenThresh = 40.0f;
-
   const auto layout = make_strip_clone_layout();
   aqifx::render(it, layout,
                  value, fanlevel,
                  max_aqi_value, max_aqi_value,
                  /*cut_value*/ value,
-                 /*green_threshold*/ kGreenThresh);
+                 aqifx::kGreenThresh);
   it.schedule_show();
 }
 
@@ -141,98 +127,59 @@ inline auto make_dual_strip_layout() {
                             });
 }
 
-inline void aqi_boot_sweep_dual_strip(esphome::light::AddressableLight &it, float fanlevel, float max_aqi_value, bool reset_animation) {
-  const float kGreenThresh = 40.0f;
+inline void aqi_boot_sweep_dual_strip(esphome::light::AddressableLight &it, float fanlevel, float max_aqi_value) {
+  static float f_step = 0;
 
-  static int step = -1;
-  static float delta_f_cached_dual_strip = -1.0f;
-  static float prev_max_aqi_dual_strip = -1.0f;
-  
-  if (reset_animation || prev_max_aqi_dual_strip != max_aqi_value) {
-    step = -1;
-    delta_f_cached_dual_strip = -1.0f;
-    prev_max_aqi_dual_strip = max_aqi_value;
-  }
-
-  if (delta_f_cached_dual_strip < 0) {
-      delta_f_cached_dual_strip = (max_aqi_value) * 0.05f / (aqifx::kWarmupDurationS / 2);
-  }
-  
-  step = round((float)step + delta_f_cached_dual_strip);
-
-  const int period = static_cast<int>(2 * max_aqi_value);
-  int t = step % period;
-  float v = (t <= max_aqi_value) ? static_cast<float>(t) : (2 * max_aqi_value - static_cast<float>(t));
+  auto f_aqi_per_iteration = (max_aqi_value * 2) * Config::kUpdateIntervalBoot_s / (float)Config::kWarmupDurationS;
+  f_step += f_aqi_per_iteration;
+  int cycle_aqi = lround(f_step) % lround(2 * max_aqi_value);
+  float f_aqi = (cycle_aqi <= max_aqi_value) ? cycle_aqi : (2 * max_aqi_value - cycle_aqi);
 
   const auto layout = make_dual_strip_layout();
   aqifx::render(it, layout,
-                 v, fanlevel,
+                f_aqi, fanlevel,
                  max_aqi_value, max_aqi_value,
-                 /*cut_value*/ v,
-                 /*green_threshold*/ kGreenThresh);
+                 /*cut_value*/ f_aqi,
+                 aqifx::kGreenThresh);
   it.schedule_show();
 }
 
 inline void aqi_state_dual_strip(esphome::light::AddressableLight &it, float value, float fanlevel, float max_aqi_value) {
-  const float kGreenThresh = 40.0f;
-
   const auto layout = make_dual_strip_layout();
   aqifx::render(it, layout,
                  value, fanlevel,
                  max_aqi_value, max_aqi_value,
                  /*cut_value*/ value,
-                 /*green_threshold*/ kGreenThresh);
+                 aqifx::kGreenThresh);
   it.schedule_show();
 }
 
-// New versions of fan animation functions with parameters
-inline void aqi_boot_sweep_fans(esphome::light::AddressableLight &it, int num_segs, int leds_per_seg, float max_aqi_value, float fanlevel, bool reset_animation) {
-  const float kGreenThresh = 40.0f; // Can also be parameterized if needed
+inline void aqi_boot_sweep_fans(esphome::light::AddressableLight &it, int num_segs, int leds_per_seg, float max_aqi_value, float fanlevel) {
+  static float f_step = 0;
 
-  static int step = -1;
-  static float delta_f_cached_fans = -1.0f; // Separate cache for fans
-  static float prev_max_aqi_fans = -1.0f;
-  
-  if (reset_animation || prev_max_aqi_fans != max_aqi_value) {
-    step = -1; // Reset step to re-initialize delta_f_cached_fans
-    delta_f_cached_fans = -1.0f;
-    prev_max_aqi_fans = max_aqi_value;
-  }
+  auto f_aqi_per_iteration = (max_aqi_value * 2) * Config::kUpdateIntervalBoot_s / (float)Config::kWarmupDurationS;
+  f_step += f_aqi_per_iteration;
+  int cycle_aqi = lround(f_step) % lround(2 * max_aqi_value);
+  float f_aqi = (cycle_aqi <= max_aqi_value) ? cycle_aqi : (2 * max_aqi_value - cycle_aqi);
 
-  if (delta_f_cached_fans < 0) { // Initialize or recalculate if max_aqi_value changes
-      delta_f_cached_fans = (max_aqi_value) * 0.05f / (aqifx::kWarmupDurationS / 2);
-  }
-  
-  step = round((float)step + delta_f_cached_fans);
-
-  const int period = static_cast<int>(2 * max_aqi_value);
-  int t = step % period;
-  float v = (t <= max_aqi_value) ? static_cast<float>(t) : (2 * max_aqi_value - static_cast<float>(t));
-
-  // Generate segment description dynamically
   const auto segment_description = aqifx::generate_fan_segment_description(leds_per_seg);
   const auto layout = aqifx::make_fan_layout(num_segs, segment_description);
-
   aqifx::render(it, layout,
-                 v, fanlevel,
+                f_aqi, fanlevel,
                  max_aqi_value, max_aqi_value,
-                 /*cut_value*/ v,
-                 /*green_threshold*/ kGreenThresh);
+                 /*cut_value*/ f_aqi,
+                 aqifx::kGreenThresh);
   it.schedule_show();
 }
 
 inline void aqi_state_fans(esphome::light::AddressableLight &it, int num_segs, int leds_per_seg, float max_aqi_value, float value, float fanlevel) {
-  const float kGreenThresh = 40.0f; // Can also be parameterized if needed
-
-  // Generate segment description dynamically
   const auto segment_description = aqifx::generate_fan_segment_description(leds_per_seg);
   const auto layout = aqifx::make_fan_layout(num_segs, segment_description);
-
   aqifx::render(it, layout,
                  value, fanlevel,
                  max_aqi_value, max_aqi_value,
                  /*cut_value*/ value,
-                 /*green_threshold*/ kGreenThresh);
+                 aqifx::kGreenThresh);
   it.schedule_show();
 }
 

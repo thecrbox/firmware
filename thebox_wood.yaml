@@ -9,12 +9,10 @@ packages:
         UI_DISPLAY_TYPE: "sh1106 128x64"
       }
     }
-  - !include src/display_fake.yaml
+  - !include src/display_debug.yaml
 #  - !include
 #    file: src/sensor_fake.yaml
   - !include
     file: src/sensor_pmsx0003.yaml
   - !include
     file: src/sensor_sen5x.yaml
-  - !include
-    file: src/sensor_bmp280.yaml

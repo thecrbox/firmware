@@ -46,7 +46,3 @@ esp32:
     type: esp-idf
     advanced:
       minimum_chip_revision: "3.1"
-
-
-
-

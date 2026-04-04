@@ -8,7 +8,7 @@
 #include "esphome/components/image/image.h"
 #include "esphome/components/qr_code/qr_code.h"
 #include "esphome/components/wifi/wifi_component.h"
-#include "time_helpers.h"
+#include "ui_helpers.h"
 
 namespace ui {
 
@@ -604,7 +604,7 @@ void ui::draw_page_auto(esphome::display::Display &it) {
     auto t = id(mysntp).now();
     auto td = id(cfg_auto_time_day).state_as_esptime();
     auto tn = id(cfg_auto_time_night).state_as_esptime();
-    bool day_mode = time_helpers::is_day_mode(t, td, tn);
+    bool day_mode = helpers::is_day_mode(t, td, tn);
 
     // Header: AUTO + sun/moon
     ui::draw_mode_header_2icons_title_wifi(it, font_big, "AUTO", &id(img_auto), day_mode ? &id(img_sun) : &id(img_moon));

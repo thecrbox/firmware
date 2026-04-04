@@ -26,12 +26,13 @@ text_sensor:
   - platform: template
     name: "Display Hex Dump"
     id: display_hex_dump
+    web_server:
+      sorting_group_id: sorting_group_system
+      sorting_weight: 51
 
 button:
   - platform: template
     name: "Display Dump Trigger"
-    id: display_dump_trigger_btn
-    device_id: device_system
     web_server:
       sorting_group_id: sorting_group_system
       sorting_weight: 50

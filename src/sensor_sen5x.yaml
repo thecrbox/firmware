@@ -17,6 +17,7 @@ sensor:
         - skip_initial: 3
       on_raw_value:
         then:
+          # TODO: fix pm_sensor_active_source magic numbers; it's unreadable; figure out better way to update active sensor (a lot in this file)
           - lambda: |-
               id(sensor_pm_1_0_in).publish_state(x);
               id(pm_sensor_active_source) = 2;

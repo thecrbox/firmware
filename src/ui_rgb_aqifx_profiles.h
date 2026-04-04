@@ -6,7 +6,7 @@
 #include <numeric> // Added for std::iota
 #include "esphome/components/light/addressable_light.h"
 #include "ui_rgb_aqifx_common.h"
-#include "board.h"
+#include "config.h"
 
 using namespace esphome;
 

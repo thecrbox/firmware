@@ -4,11 +4,16 @@ uart:
   baud_rate: 9600
 
 switch:
+  # in case we want to enable-disable the sensor
+  # to preserve the lifetime, it could be done using this pin as
+  # well (not only via a command); since it would cripple the PID
+  # keep it internal (so user can't put sensor to sleep) and always on
+  # (so the sensor actually works)
   - platform: gpio
     pin: ${SENSOR_UART_ENABLE}
     name: "pmsx003 SET pin"
     restore_mode: RESTORE_DEFAULT_ON
-    internal: false
+    internal: true
 
 sensor:
   - platform: pmsx003
@@ -29,6 +34,7 @@ sensor:
         - skip_initial: 3
       on_raw_value:
         then:
+          # TODO: fix pm_sensor_active_source magic numbers; it's unreadable; figure out better way to update active sensor
           - lambda: |-
               id(sensor_pm_1_0_in).publish_state(x);
               id(pm_sensor_active_source) = 3;
@@ -48,6 +54,7 @@ sensor:
         - skip_initial: 3
       on_raw_value:
         then:
+          # TODO: fix pm_sensor_active_source magic numbers; it's unreadable; figure out better way to update active sensor
           - lambda: |-
               id(sensor_pm_2_5_in).publish_state(x);
               id(pm_sensor_active_source) = 3;
@@ -67,6 +74,7 @@ sensor:
         - skip_initial: 3
       on_raw_value:
         then:
+          # TODO: fix pm_sensor_active_source magic numbers; it's unreadable; figure out better way to update active sensor
           - lambda: |-
               id(sensor_pm_10_0_in).publish_state(x);
               id(pm_sensor_active_source) = 3;

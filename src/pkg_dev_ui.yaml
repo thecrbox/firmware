@@ -7,7 +7,7 @@ substitutions:
 esphome:
   devices:
     - id: device_interface
-      name: "Interface"
+      name: "${device_name} Interface"
 
 web_server:
   sorting_groups:
@@ -106,3 +106,7 @@ image:
   - file: "images/droplet.png"
     id: img_droplet
     type: BINARY
+
+packages:
+  - !include ui_display_and_encoder.yaml
+  - !include ui_rgb.yaml

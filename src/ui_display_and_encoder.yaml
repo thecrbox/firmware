@@ -1,7 +1,7 @@
 esphome:
   includes:
     - src/ui_draw.h
-    - src/time_helpers.h
+    - src/ui_helpers.h
   on_boot:
     priority: -100
     then:
@@ -508,15 +508,8 @@ binary_sensor:
 #                    level: DEBUG
 #                    format: "UI: ui_on_very_long_click; hotspot inactive, ignoring"
       - timing:
-          - ON for 1s to 3.9s
-        then:
-          - logger.log:
-              level: INFO
-              format: "UI: ui_on_medium_click; "
-          - button.press: display_dump_trigger_btn
-      - timing:
           #- ON for 4s to 9.9s
-          - ON for at least 4s
+          - ON for at least 5s
           - OFF for at least 0.05s
         then:
           - logger.log:
@@ -524,7 +517,7 @@ binary_sensor:
               format: "UI: ui_on_very_long_click; factory reset"
           - button.press: factory_reset_action
       - timing:
-          - ON for 0.3s to 1.0s
+          - ON for 0.3s to 3s
           - OFF for at least 0.05s
         then:
           - script.execute: ui_on_long_click

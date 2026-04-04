@@ -12,7 +12,7 @@ substitutions:
 esphome:
   devices:
     - id: device_sensor
-      name: "Sensor"
+      name: "${device_name} Sensor"
 
 globals:
   - id: pm_sensor_active_source

@@ -5,13 +5,10 @@ packages:
         device_name: "box2-0004",
         device_setup_ssid: "box2-0004",
         device_setup_password: "12345678",
-        sensor_type: "real",
         UI_DISPLAY_TYPE: "sh1106 128x64"
       }
     }
-  - !include src/display_debug.yaml
-#  - !include
-#    file: src/sensor_fake.yaml
+  - !include src/display_normal.yaml
   - !include
     file: src/sensor_pmsx0003.yaml
   - !include

@@ -1,7 +1,4 @@
 esphome:
-  devices:
-    - id: device_system
-      name: "System"
 
 web_server:
   sorting_groups:
@@ -12,11 +9,10 @@ web_server:
 switch:
   - platform: template
     id: unlock_system_advanced
-    name: "Unlock advanced settings (15s)"
+    name: "Unlock settings (15s)"
     icon: "mdi:lock"
     optimistic: true
     restore_mode: always_off
-    device_id: device_system
     web_server:
       sorting_group_id: sorting_group_system
       sorting_weight: 1
@@ -28,7 +24,7 @@ switch:
 
 packages:
   guarded_factory_reset: !include {
-    file: thebox_guarded_button.yaml,
+    file: helper_guarded_button.yaml,
     vars: {
       name: "Factory Reset",
       id: factory_reset_btn,
@@ -37,11 +33,10 @@ packages:
       icon: "mdi:delete-restore",
       group: sorting_group_system,
       weight: 101,
-      device_id: device_system,
     }
   }
   guarded_device_restart: !include {
-    file: thebox_guarded_button.yaml,
+    file: helper_guarded_button.yaml,
     vars: {
       name: "Device Restart",
       id: device_restart_btn,
@@ -50,7 +45,6 @@ packages:
       icon: "mdi:restart",
       group: sorting_group_system,
       weight: 102,
-      device_id: device_system,
     }
   }
 

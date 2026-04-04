@@ -10,8 +10,6 @@ packages:
       }
     }
   - !include src/display_normal.yaml
-#  - !include
-#    file: src/sensor_fake.yaml
   - !include
     file: src/sensor_pmsx0003.yaml
   - !include

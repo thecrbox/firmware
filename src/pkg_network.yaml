@@ -4,14 +4,8 @@ esphome:
       then:
         - script.execute: _network_update_state
 
-ota:
-  - platform: esphome
-    id: myota
-    password: !secret ota_pass
-
 wifi:
-#  ssid: !secret wifi_ssid
-#  password: !secret wifi_password
+  id: mywifi
   fast_connect: false
   power_save_mode: none
 
@@ -20,7 +14,7 @@ wifi:
     ap_timeout: 0s
 
   reboot_timeout: 5min
-  id: mywifi
+
 
   on_connect:
     then:
@@ -44,9 +38,7 @@ esp32_improv:
 
 api:
   id: myapi
-#  encryption:
-#    key: !secret api_key
-  # home assistant is not needed for everyone, so let's disable by default
+  # home assistant is not needed for everyone, so let's disable reboots by default
   reboot_timeout: 0s
 
 web_server:
@@ -54,7 +46,6 @@ web_server:
   version: 3
   local: false
   id: mywebserver
-
 
 http_request:
   id: network_http_client

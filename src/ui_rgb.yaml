@@ -1,7 +1,7 @@
 esphome:
   includes:
-    - src/ui_rgb_aqifx_common.h
-    - src/ui_rgb_aqifx_profiles.h
+    - <src/ui_rgb_aqifx_common.h>
+    - <src/ui_rgb_aqifx_profiles.h>
   on_boot:
     priority: -50
     then:

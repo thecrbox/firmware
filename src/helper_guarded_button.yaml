@@ -1,0 +1,18 @@
+# Vars expected: name, id, unlocker, target_button_id, icon, group, weight, device_id
+
+button:
+  - platform: template
+    id: ${id}
+    name: ${name}
+    icon: ${icon}
+    web_server:
+      sorting_group_id: ${group}
+      sorting_weight: ${weight}
+    on_press:
+      - if:
+          condition:
+            switch.is_on: ${unlocker}
+          then:
+            - button.press: ${target_button_id}
+          else:
+            - logger.log: { level: DEBUG, format: "'${name}' is locked" }

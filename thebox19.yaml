@@ -2,16 +2,20 @@ packages:
   - !include {
       file: thebox_base.yaml,
       vars: {
-        device_name: "box2-0003",
+        device_name: "box2-0019",
         UI_DISPLAY_TYPE: "sh1106 128x64"
       }
     }
   - !include
-    file: src/display_normal.yaml
+    file: src/display_fake.yaml
   - !include
-    file: src/sensor_pmsx0003.yaml
-  - !include
-    file: src/sensor_sen5x.yaml
+    file: src/sensor_fake.yaml
+#  - !include
+#    file: src/sensor_pmsx0003.yaml
+#  - !include
+#    file: src/sensor_sen5x.yaml
+#  - !include
+#    file: src/sensor_bmp280.yaml
 
 wifi:
   id: mywifi
@@ -27,3 +31,4 @@ ota:
   - platform: esphome
     id: myota
     password: !secret ota_pass
+

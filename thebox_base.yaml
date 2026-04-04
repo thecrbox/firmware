@@ -1,11 +1,6 @@
 # Base configuration for thebox devices
 
 substitutions:
-  # Expected from wrapper files:
-  # device_name: "box2-xxxx"
-  # device_setup_ssid: "box2-xxxx"
-  # device_setup_password: "password"
-
   # Default UI display type, can be overridden by wrapper files
   UI_DISPLAY_TYPE: "SH1106 128x64"
 
@@ -31,6 +26,15 @@ esphome:
       - "-DUPDATE_INTERVAL_NORMAL_MS=${UPDATE_INTERVAL_NORMAL_MS}"
       - "-DUPDATE_INTERVAL_BOOT_MS=${UPDATE_INTERVAL_BOOT_MS}"
 
+wifi:
+  id: mywifi
+#  password: !secret wifi_password
+
+api:
+  id: myapi
+  encryption:
+#    key: !secret api_key
+
 packages:
   - !include src/pkg_board.yaml
   - !include src/pkg_network.yaml
@@ -39,6 +43,7 @@ packages:
   - !include src/pkg_dev_ui.yaml
   - !include src/pkg_dev_sensor.yaml
   - qr_code:
+
 
 logger:
   level: INFO

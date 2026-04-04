@@ -48,4 +48,4 @@ esp32:
 
 esphome:
   includes:
-    - src/config.h
+    - <src/config.h>

@@ -11,8 +11,8 @@ esphome:
       - delay: ${BOOT_GUARD_S}s
       - lambda: id(is_booting) = false;
   includes:
-    - src/purifier_state_controller.h
-    - src/purifier_pid.h
+    - <src/purifier_state_controller.h>
+    - <src/purifier_pid.h>
 
 globals:
   - id: is_booting
@@ -27,6 +27,7 @@ switch:
     optimistic: true
     restore_mode: always_off
     device_id: device_purifier
+    disabled_by_default: true
     web_server:
       sorting_group_id: sorting_group_purifier_config_auto_advanced
       sorting_weight: -1
@@ -97,36 +98,42 @@ packages:
     id: cfg_boost_proportional_jump,
     unlocker: unlock_purifier_config_auto_advanced,
     min: 0.1, max: 1.0, step: 0.05, initial: "0.3f",
+    disabled_by_default: true,
     group: sorting_group_purifier_config_auto_advanced, weight: 10, device_id: device_purifier } }
   locked_cfg_boost_derivative_jump: !include { file: helper_guarded_number.yaml, vars: {
     name: "AUTO: Coef derivative",
     id: cfg_boost_derivative_jump,
     unlocker: unlock_purifier_config_auto_advanced,
     min: 0.1, max: 1.0, step: 0.05, initial: "0.3f",
+    disabled_by_default: true,
     group: sorting_group_purifier_config_auto_advanced, weight: 11, device_id: device_purifier } }
   locked_cfg_boost_integral_jump: !include { file: helper_guarded_number.yaml, vars: {
     name: "AUTO: Coef integral",
     id: cfg_boost_integral_jump,
     unlocker: unlock_purifier_config_auto_advanced,
     min: 0.001, max: 0.01, step: 0.0005, initial: "0.002f",
+    disabled_by_default: true,
     group: sorting_group_purifier_config_auto_advanced, weight: 12, device_id: device_purifier } }
   locked_cfg_boost_derivative_decay: !include { file: helper_guarded_number.yaml, vars: {
     name: "AUTO: Decay derivative %⁄s",
     id: cfg_boost_derivative_decay,
     unlocker: unlock_purifier_config_auto_advanced,
     min: 0.100, max: 0.500, step: 0.01, initial: "0.50f",
+    disabled_by_default: true,
     group: sorting_group_purifier_config_auto_advanced, weight: 13, device_id: device_purifier } }
   locked_cfg_boost_integral_decay: !include { file: helper_guarded_number.yaml, vars: {
     name: "AUTO: Decay integral %⁄s",
     id: cfg_boost_integral_decay,
     unlocker: unlock_purifier_config_auto_advanced,
     min: 0.000, max: 0.050, step: 0.001, initial: "0.015f",
+    disabled_by_default: true,
     group: sorting_group_purifier_config_auto_advanced, weight: 14, device_id: device_purifier } }
   locked_cfg_integral_max_global: !include { file: helper_guarded_number.yaml, vars: {
     name: "AUTO: Max Integral global cap",
     id: cfg_integral_max_global,
     unlocker: unlock_purifier_config_auto_advanced,
     min: 15.0, max: 60.0, step: 1.0, initial: "45.0f",
+    disabled_by_default: true,
     group: sorting_group_purifier_config_auto_advanced, weight: 15, device_id: device_purifier } }
 
 sensor:

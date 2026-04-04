@@ -1,23 +1,39 @@
-external_components:
-  - source:
-      type: local
-      path: src/components
+#external_components:
+#  - source:
+#      type: local
+#      path: src/components
+
+dashboard_import:
+  package_import_url: github://thecrbox/firmware/thebox_demo.yaml@main
+  import_full_config: true
 
 packages:
   - !include {
       file: thebox_base.yaml,
       vars: {
         device_name: "box2-0020",
-        device_setup_ssid: "box2-0020",
-        device_setup_password: "12345678",
-        sensor_type: "real",
         UI_DISPLAY_TYPE: "sh1106 128x64"
       }
     }
-  - !include src/display_debug.yaml
-#  - !include
-#    file: src/sensor_fake.yaml
+  - !include
+    #file: src/display_debug.yaml
+    file: src/display_normal.yaml
   - !include
     file: src/sensor_pmsx0003.yaml
   - !include
     file: src/sensor_sen5x.yaml
+
+wifi:
+  id: mywifi
+#  ssid:  !secret wifi_ssid
+#  password: !secret wifi_password
+
+api:
+  id: myapi
+#  encryption:
+#    key: !secret api_key
+
+ota:
+  - platform: esphome
+    id: myota
+    password: !secret ota_pass

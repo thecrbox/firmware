@@ -1,0 +1,58 @@
+# Vars expected: name, id, unlocker, min, max, initial, step, group, weight, device_id
+
+globals:
+  - id: guarded_${id}
+    type: float
+    restore_value: true
+    initial_value: ${initial}
+
+number:
+  - platform: template
+    id: ${id}
+    name: ${name}
+    device_id: ${device_id}
+    min_value: ${min}
+    max_value: ${max}
+    disabled_by_default: ${disabled_by_default}
+    step: ${step}
+    optimistic: false         # explicit
+    web_server:
+      sorting_weight: ${weight}
+      sorting_group_id: ${group}
+    # Always show the global's value
+    lambda: |-
+      return id(guarded_${id});
+    update_interval: 250ms
+
+    set_action:
+      - if:
+          condition:
+            switch.is_on: ${unlocker}
+          then:
+            - globals.set:
+                id: guarded_${id}
+                value: !lambda 'return x;'
+            - lambda: |-
+                // reflect accepted value immediately
+                id(${id}).publish_state(id(guarded_${id}));
+          else:
+            - logger.log: "Blocked write while locked"
+            - lambda: |-
+                const float v = id(guarded_${id});
+                // use at least one full step so the UI *must* redraw
+                float eps = (${step} > 0.0f) ? ${step} : 0.1f;
+                // nudge inward to avoid crossing bounds
+                float bounce = (v < ${max}) ? v + eps : v - eps;
+                if (bounce > ${max}) bounce = ${max};
+                if (bounce < ${min}) bounce = ${min};
+                id(${id}).publish_state(bounce);
+            - delay: 75ms         # ensure two distinct SSE events
+            - lambda: |-
+                id(${id}).publish_state(id(guarded_${id}));
+
+# Ensure initial render matches the stored value
+esphome:
+  on_boot:
+    priority: -100
+    then:
+      - component.update: ${id}

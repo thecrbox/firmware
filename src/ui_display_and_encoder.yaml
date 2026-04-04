@@ -1,7 +1,7 @@
 esphome:
   includes:
-    - src/ui_draw.h
-    - src/ui_helpers.h
+    - <src/ui_draw.h>
+    - <src/ui_helpers.h>
   on_boot:
     priority: -100
     then:
